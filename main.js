@@ -8,7 +8,7 @@ function createWindow() {
     minWidth: 360,
     minHeight: 640,
     title: 'Tempo — Make time count',
-    backgroundColor: '#f7f8fa',
+    backgroundColor: '#F4F1EA',
     webPreferences: {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),

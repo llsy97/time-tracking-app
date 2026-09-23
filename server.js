@@ -18,7 +18,9 @@ const googleRoutes = require('./google-auth.js').createGoogleRoutes({
   verifyToken,
 });
 const PUBLIC_FILES = new Set(['index.html', 'styles.css', 'script.js', 'time-utils.js', 'manifest.webmanifest', 'sw.js', 'icon.svg', 'icon-192.png', 'icon-512.png']);
+['assets/tokens.css', 'assets/fonts/BricolageGrotesque-Variable.ttf', 'assets/fonts/Geist-Variable.ttf', 'assets/fonts/GeistMono-Variable.ttf'].forEach(file => PUBLIC_FILES.add(file));
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
+TYPES['.ttf'] = 'font/ttf';
 const server = http.createServer(async (req, res) => {
   let filename;
   try { filename = decodeURIComponent(new URL(req.url, 'http://localhost').pathname).slice(1) || 'index.html'; }

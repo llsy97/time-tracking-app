@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const T = window.TempoTime;
 const STORE = 'tempo.workspace.v2';
 const DEFAULT_LABELS = ['Design', 'Meeting', 'Email', 'Coding', 'Planning', 'Docs', 'Review', 'Other'];
-const COLORS = ['#448975', '#a597c7', '#d5af72', '#7b9fb4', '#c68e8b', '#93ae84', '#b89b74', '#9ba5ac'];
+const COLORS = ['var(--cat-design)', 'var(--cat-meeting)', 'var(--cat-email)', 'var(--cat-coding)', 'var(--cat-planning)', 'var(--cat-docs)', 'var(--cat-review)', 'var(--cat-other)'];
 const blankWorkspace = () => ({ entries: [], labels: [], removedDefaultLabels: [], draft: { title: '', description: '' } });
 const blankState = () => ({ version: 2, accounts: [], session: null, theme: 'light', workspaces: { guest: blankWorkspace() } });
 let storageBroken = false;
@@ -66,12 +66,17 @@ function commit(change) {
 function showDialog(id) {
   const dialog = $(id);
   if (!dialog.open) dialog.showModal();
+  if (id === 'settingsDialog') document.body.classList.add('settings-open');
 }
+const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 function applyTheme() {
-  document.body.dataset.theme = state.theme;
-  $('themeToggle').setAttribute('aria-checked', String(state.theme === 'dark'));
-  document.querySelector('meta[name="theme-color"]').content = state.theme === 'dark' ? '#1c2722' : '#166858';
+  const theme = ['light', 'dark', 'system'].includes(state.theme) ? state.theme : 'light';
+  document.documentElement.dataset.theme = theme;
+  document.body.dataset.theme = theme === 'system' ? (systemTheme.matches ? 'dark' : 'light') : theme;
+  document.querySelectorAll('[data-theme-choice]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.themeChoice === theme)));
+  document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
 }
+systemTheme.addEventListener('change', () => { if (state.theme === 'system') applyTheme(); });
 function loadFields() {
   const entry = activeEntry();
   const values = entry || workspace().draft;
@@ -106,13 +111,18 @@ function renderAccount() {
   $('profileName').textContent = account?.username || 'Your workspace';
   $('profileStatus').textContent = account ? 'Local account' : 'Saved on this device';
   $('avatar').textContent = (account?.username || 'Y').slice(0, 1).toUpperCase();
-  $('settingsAccount').textContent = account ? `Signed in as ${account.username}` : 'Your local workspace';
-  $('settingsAccountHint').textContent = account ? 'Your records are saved in this account on this device.' : 'Create an account to keep separate workspaces.';
+  $('settingsAccount').textContent = account ? account.username : 'Local workspace';
+  $('settingsAccountHint').textContent = account ? 'Stored in this account on this device' : 'Stored in this browser only';
   $('accountButton').classList.toggle('hidden', !!account);
   $('signOutBtn').classList.toggle('hidden', !account);
 }
 function readableDay(day) {
   return new Date(`${day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function updateDateLabel() {
+  const summary = document.body.dataset.view === 'summary';
+  $('dateLabel').textContent = new Date(`${selectedDay}T12:00:00`).toLocaleDateString('en-US', { ...(summary ? {} : { weekday: 'short' }), month: 'short', day: 'numeric' });
+  $('dateLabel').title = readableDay(selectedDay);
 }
 function timeLabel(value, includeDate = false) {
   return new Date(value).toLocaleTimeString('en-US', { ...(includeDate ? { month: 'short', day: 'numeric' } : {}), hour: 'numeric', minute: '2-digit' });
@@ -120,8 +130,19 @@ function timeLabel(value, includeDate = false) {
 function renderLive() {
   const now = Date.now();
   const active = activeEntry();
-  $('timerDisplay').innerHTML = T.timer(active ? now - Date.parse(active.startedAt) : 0).split(':').join('<span>:</span>');
-  $('trackingStatus').innerHTML = `<i></i>${active ? 'In the flow' : 'Ready when you are'}`;
+  const elapsed = active ? Math.max(0, now - Date.parse(active.startedAt)) : 0;
+  const timerParts = T.timer(elapsed).split(':');
+  $('timerDisplay').innerHTML = `${timerParts[0]}<span class="colon">:</span>${timerParts[1]}<span class="colon">:</span><span class="seconds">${timerParts[2]}</span>`;
+  const wasTracking = document.body.classList.contains('is-tracking');
+  document.body.classList.toggle('is-tracking', !!active);
+  if (!!active !== wasTracking) $('taskNotes').open = !!active;
+  $('workingMeta').innerHTML = active ? `<span class="working-label"><i style="background:${color(active.title)}"></i>${escapeHtml(active.title)}</span><span>since ${timeLabel(active.startedAt)}</span>` : '';
+  const rounded = T.roundedTenths(elapsed);
+  const boundary = Math.max(1, rounded) * 360000;
+  $('roundingFill').style.width = `${Math.min(100, elapsed / boundary * 100)}%`;
+  $('roundedCurrent').textContent = `${T.roundedHours(elapsed)}h rounded`;
+  $('roundingNext').textContent = `next ${((rounded + 1) / 10).toFixed(1)}h after ${T.timer(rounded * 360000).replace(/^00:/, '')}`;
+  $('trackingStatus').innerHTML = `<i></i>${active ? 'Recording' : 'Ready when you are'}`;
   $('trackingStatus').classList.toggle('active', !!active);
   $('toggleTrackingBtn').classList.toggle('running', !!active);
   $('trackingButtonText').textContent = active ? 'Stop & save block' : 'Start tracking';
@@ -132,42 +153,59 @@ function renderLive() {
   const totalTenths = groups.reduce((sum, group) => sum + group.tenths, 0);
   $('totalTracked').innerHTML = `${(totalTenths / 10).toFixed(1)}<span>h</span>`;
   $('totalTracked').title = T.timer(total);
+  $('actualTotal').textContent = T.timer(total);
+  $('summaryActual').textContent = T.timer(total);
+  $('trackerFootnote').textContent = active ? `Day total ${(totalTenths / 10).toFixed(1)}h · ${entries.length} blocks` : 'Saved automatically, even if you close the app.';
   $('totalCaption').textContent = entries.some(e => !e.endedAt && selectedDay === T.dayKey()) ? 'Tracking live · keep your focus' : entries.length ? `${T.timer(total)} actual · each block rounded up` : 'A fresh start for your day';
   $('blockCount').textContent = entries.length;
   $('listCount').textContent = entries.length;
   $('blockCaption').textContent = entries.length ? `${groups.length} unique task${groups.length === 1 ? '' : 's'} throughout the day` : 'One task, one moment at a time';
   $('topTask').textContent = groups[0]?.title || 'A clean slate';
   $('topTaskCaption').textContent = groups.length ? `${(groups[0].tenths / 10).toFixed(1)}h · rounded task total` : 'Your focus will show up here';
-  $('donutTotal').textContent = `${(totalTenths / 10).toFixed(1)}h`;
-  $('donutSubtitle').textContent = groups.length ? `${groups.length} task${groups.length === 1 ? '' : 's'} · ${entries.length} block${entries.length === 1 ? '' : 's'}` : 'Make room for focus';
-  let position = 0;
-  const segments = groups.map(group => {
-    const start = position;
-    position += totalTenths ? group.tenths / totalTenths * 100 : 0;
-    return `${color(group.title)} ${start}% ${position}%`;
-  });
-  $('summaryDonut').style.background = total ? `conic-gradient(${segments.join(',')})` : 'var(--ring)';
+  $('donutTotal').innerHTML = `${(totalTenths / 10).toFixed(1)}<span>h</span>`;
+  $('donutSubtitle').textContent = `actual · ${groups.length} tasks`;
+  $('summaryDonut').innerHTML = groups.map(group => `<span style="flex:${group.tenths};background:${color(group.title)}" title="${escapeHtml(group.title)}: ${(group.tenths / 10).toFixed(1)}h"></span>`).join('');
+  $('summaryDonut').setAttribute('aria-label', groups.length ? groups.map(group => `${group.title}: ${(group.tenths / 10).toFixed(1)} hours`).join(', ') : 'No time tracked');
   $('summaryList').innerHTML = groups.length ? groups.map(group => {
     const percentage = totalTenths ? Math.round(group.tenths / totalTenths * 100) : 0;
-    return `<div class="summary-row" style="--color:${color(group.title)}"><div class="summary-row-top"><i class="color-dot"></i><span class="summary-name" title="${escapeHtml(group.title)}">${escapeHtml(group.title)}</span><strong title="Actual: ${T.timer(group.ms)}">${(group.tenths / 10).toFixed(1)}h</strong><small>${percentage}%</small></div><div class="progress-track"><div style="width:${percentage}%"></div></div></div>`;
-  }).join('') : '<div class="summary-empty"><strong>A little focus starts here.</strong>Track your first task to see<br>how your day comes together.</div>';
+    return `<div class="summary-row" style="--color:${color(group.title)}"><i class="color-dot"></i><div class="summary-task"><span class="summary-name">${escapeHtml(group.title)}</span><span class="num actual-duration">${T.timer(group.ms)}</span></div><strong>${(group.tenths / 10).toFixed(1)}h</strong><small>${percentage}%</small></div>`;
+  }).join('') : '<div class="summary-empty"><strong>A little focus starts here.</strong>Track your first task to see how your day comes together.</div>';
+  renderRibbons(entries, now);
+  $('summaryExportBtn').disabled = !entries.length;
+  $('settingsExportBtn').disabled = !entries.length;
   entries.forEach(entry => {
     const durationEl = document.querySelector(`[data-duration="${CSS.escape(entry.id)}"]`);
-    if (durationEl) durationEl.innerHTML = `${T.roundedHours(entry.ms)}h<small class="actual-duration">${T.duration(entry.ms)} actual</small>`;
+    if (durationEl) durationEl.textContent = `${T.roundedHours(entry.ms)}h`;
+    const actualEl = document.querySelector(`[data-actual-duration="${CSS.escape(entry.id)}"]`);
+    if (actualEl) actualEl.textContent = T.duration(entry.ms);
   });
   $('clearDayBtn').disabled = !entries.length;
   $('exportBtn').disabled = !entries.length;
 }
+function renderRibbons(entries, now) {
+  const [start, end] = T.dayBounds(selectedDay);
+  const fraction = value => {
+    if (value <= start) return 0;
+    if (value >= end) return 100;
+    const date = new Date(value);
+    return (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) / 864;
+  };
+  const segments = entries.map(entry => `<span class="ribbon-segment" style="left:${fraction(entry.sliceStart)}%;width:${Math.max(0, fraction(entry.sliceEnd) - fraction(entry.sliceStart))}%;background:${color(entry.title)}" title="${escapeHtml(entry.title)} · ${T.duration(entry.ms)}"></span>`).join('');
+  const marker = selectedDay === T.dayKey(now) ? `<span class="ribbon-now" style="left:${fraction(now)}%" title="Now"></span>` : '';
+  document.querySelectorAll('[data-ribbon]').forEach(ribbon => { ribbon.innerHTML = segments + marker; });
+}
 function renderEntries() {
   const entries = T.dailyEntries(workspace().entries, selectedDay);
-  $('entryList').innerHTML = entries.length ? entries.map(entry => {
+  $('entryList').innerHTML = entries.length ? entries.map((entry, index) => {
     const crossesDay = T.dayKey(entry.startedAt) !== T.dayKey(entry.endedAt || Date.now());
-    return `<article class="entry" style="--color:${color(entry.title)}"><span class="entry-symbol">${icon('clock')}</span><div class="entry-info"><div class="entry-name">${escapeHtml(entry.title)}${!entry.endedAt ? '<span class="entry-live">● Live</span>' : ''}</div>${entry.description ? `<p class="entry-description">${escapeHtml(entry.description)}</p>` : ''}</div><div class="entry-time">${timeLabel(entry.startedAt, crossesDay)} – ${entry.endedAt ? timeLabel(entry.endedAt, crossesDay) : 'Now'}${crossesDay ? '<br>Duration shown for selected day' : ''}</div><div class="entry-duration" data-duration="${escapeHtml(entry.id)}">${T.roundedHours(entry.ms)}h<small class="actual-duration">${T.duration(entry.ms)} actual</small></div><div class="entry-actions"><button class="icon-button" data-edit="${escapeHtml(entry.id)}" aria-label="Edit ${escapeHtml(entry.title)}">${icon('edit')}</button><button class="icon-button danger" data-delete="${escapeHtml(entry.id)}" aria-label="Delete ${escapeHtml(entry.title)}">${icon('trash')}</button></div></article>`;
+    const labelTime = timeLabel(entry.startedAt).split(' ');
+    return `<article class="entry${index === 0 ? ' featured' : ''}" style="--color:${color(entry.title)}"><time class="timeline-time" datetime="${escapeHtml(entry.startedAt)}">${labelTime[0]}<span>${labelTime.slice(1).join(' ')}</span></time><div class="timeline-rail"><i></i></div><div class="entry-card"><div class="entry-heading"><h3 class="entry-name">${escapeHtml(entry.title)}${!entry.endedAt ? '<span class="entry-live">● Live</span>' : ''}</h3><span class="entry-duration" data-duration="${escapeHtml(entry.id)}">${T.roundedHours(entry.ms)}h</span></div><div class="entry-time">${timeLabel(entry.startedAt, crossesDay)} – ${entry.endedAt ? timeLabel(entry.endedAt, crossesDay) : 'Now'} · <span data-actual-duration="${escapeHtml(entry.id)}">${T.duration(entry.ms)}</span>${crossesDay ? '<br>Duration shown for selected day' : ''}</div>${entry.description ? `<p class="entry-description">${escapeHtml(entry.description)}</p>` : ''}<div class="entry-actions"><button class="icon-button" data-edit="${escapeHtml(entry.id)}" aria-label="Edit ${escapeHtml(entry.title)}">${icon('edit')}</button><button class="icon-button" data-delete="${escapeHtml(entry.id)}" aria-label="Delete ${escapeHtml(entry.title)}">${icon('trash')}</button></div></div></article>`;
   }).join('') : `<div class="empty-blocks"><div class="empty-clock">${icon('clock')}</div><h3>Your day is a blank canvas.</h3><p>Start the timer or add a block.<br>We’ll keep the details so you don’t have to.</p></div>`;
 }
 function render() {
   $('dayFilter').value = selectedDay;
-  $('dateLabel').textContent = `${selectedDay === T.dayKey() ? 'Today, ' : ''}${readableDay(selectedDay)}`;
+  updateDateLabel();
+  $('dayEyebrow').textContent = `${selectedDay === T.dayKey() ? 'TODAY' : readableDay(selectedDay).toUpperCase()} · ROUNDED TOTAL`;
   renderLabels(); renderAccount(); applyTheme(); renderEntries(); renderLive();
 }
 function persistDraft() {
@@ -206,7 +244,8 @@ function openEdit(id = null) {
   const entry = id ? workspace().entries.find(e => e.id === id) : null;
   if (id && !entry) return;
   editingId = id;
-  $('editHeading').textContent = id ? 'Edit time block' : 'Add time block';
+  $('editHeading').textContent = id ? 'Make it accurate' : 'Make time count';
+  $('editEyebrow').textContent = id ? 'EDIT BLOCK' : 'ADD BLOCK';
   $('editTitle').value = entry?.title === 'Untitled task' ? '' : entry?.title || '';
   $('editDescription').value = entry?.description || '';
   const end = selectedDay === T.dayKey() ? new Date() : new Date(`${selectedDay}T10:00:00`);
@@ -214,7 +253,16 @@ function openEdit(id = null) {
   $('editEnd').value = entry ? (entry.endedAt ? T.localInput(entry.endedAt) : '') : T.localInput(end);
   $('editEnd').required = !entry || !!entry.endedAt;
   $('editError').textContent = '';
+  renderEditLabels(); updateEditReadout();
   showDialog('editDialog');
+}
+function renderEditLabels() {
+  $('editLabels').innerHTML = availableLabels().map(label => `<button type="button" class="chip${label.toLowerCase() === $('editTitle').value.trim().toLowerCase() ? ' selected' : ''}" aria-pressed="${label.toLowerCase() === $('editTitle').value.trim().toLowerCase()}" data-edit-label="${escapeHtml(label)}"><i style="--chip-color:${color(label)}"></i>${escapeHtml(label)}</button>`).join('');
+}
+function updateEditReadout() {
+  const start = Date.parse($('editStart').value);
+  const end = $('editEnd').value ? Date.parse($('editEnd').value) : Date.now();
+  $('editReadout').innerHTML = Number.isFinite(start) && Number.isFinite(end) && end >= start ? `<span>${T.duration(end - start)}</span><span class="muted">→</span><span>${T.roundedHours(end - start)}h billed</span>` : '<span>Choose a valid time range</span>';
 }
 function saveEdit(event) {
   event.preventDefault();
@@ -257,13 +305,14 @@ function moveDay(offset) {
 }
 function setView(view) {
   document.body.dataset.view = view;
-  document.querySelectorAll('[data-view]').forEach(button => {
+  document.querySelectorAll('.desktop-nav [data-view], .mobile-nav [data-view]').forEach(button => {
     if (button === document.body) return;
     button.classList.toggle('selected', button.dataset.view === view);
     button.setAttribute('aria-current', button.dataset.view === view ? 'page' : 'false');
   });
   const titles = { dashboard: ['Overview', 'Your day, at a glance', 'Less watching the clock. More time for what matters.'], summary: ['Daily summary', 'A clearer picture of your day', 'Every small moment, brought together by task.'], history: ['Time blocks', 'The moments that made your day', 'Review, refine, and remember what you worked on.'] };
-  $('pageCrumb').textContent = titles[view][0]; $('pageTitle').innerHTML = titles[view][1] + '<span>.</span>'; $('pageSubtitle').textContent = titles[view][2];
+  $('pageCrumb').textContent = titles[view][0]; $('pageTitle').textContent = { dashboard: 'Overview', summary: 'Summary', history: 'Blocks' }[view]; $('pageSubtitle').textContent = titles[view][2];
+  updateDateLabel();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 function setAuthMode(mode) {
@@ -380,9 +429,11 @@ function exportDay() {
 document.addEventListener('click', event => {
   const button = event.target.closest('button'); if (!button) return;
   if (button.hasAttribute('data-close')) button.closest('dialog').close();
-  if (button.dataset.view) setView(button.dataset.view);
+  if (button.dataset.view) { $('settingsDialog').close(); setView(button.dataset.view); }
   if (button.hasAttribute('data-settings')) showDialog('settingsDialog');
   if (button.hasAttribute('data-account')) state.session ? showDialog('settingsDialog') : openAuth();
+  if (button.dataset.themeChoice) { if (commit(next => { next.theme = button.dataset.themeChoice; })) applyTheme(); }
+  if (button.dataset.editLabel) { $('editTitle').value = button.dataset.editLabel; renderEditLabels(); }
   if (button.dataset.auth) setAuthMode(button.dataset.auth);
   if (button.dataset.edit) openEdit(button.dataset.edit);
   if (button.dataset.delete) deleteEntry(button.dataset.delete);
@@ -408,7 +459,7 @@ $('clearDayBtn').addEventListener('click', () => {
   }, 'Clear day');
 });
 $('confirmForm').addEventListener('submit', event => { event.preventDefault(); const action = confirmation; confirmation = null; $('confirmDialog').close(); action?.(); });
-$('confirmDialog').addEventListener('close', () => { confirmation = null; });
+$('confirmDialog').addEventListener('close', () => { if (!$('confirmDialog').open) confirmation = null; });
 $('labelForm').addEventListener('submit', event => {
   event.preventDefault(); const name = $('labelName').value.trim();
   if (!name) { $('labelError').textContent = 'Enter a label name.'; return; }
@@ -421,7 +472,12 @@ $('labelForm').addEventListener('submit', event => {
   })) return;
   $('taskTitle').value = name; persistDraft(); $('labelDialog').close(); render(); toast('Label saved for next time.');
 });
-$('themeToggle').addEventListener('click', () => { if (commit(next => { next.theme = next.theme === 'dark' ? 'light' : 'dark'; })) applyTheme(); });
+$('settingsDialog').addEventListener('close', () => { if (!$('settingsDialog').open) document.body.classList.remove('settings-open'); });
+$('editTitle').addEventListener('input', renderEditLabels);
+['editStart', 'editEnd'].forEach(id => $(id).addEventListener('input', updateEditReadout));
+$('summaryExportBtn').addEventListener('click', exportDay);
+$('settingsExportBtn').addEventListener('click', exportDay);
+document.querySelector('[data-home]').addEventListener('click', event => { event.preventDefault(); setView('dashboard'); });
 $('accountButton').addEventListener('click', openAuth);
 $('authForm').addEventListener('submit', submitAuth);
 $('authDialog').addEventListener('close', () => { googleSetupGeneration++; $('authPassword').value = ''; $('authConfirm').value = ''; });
@@ -439,7 +495,15 @@ window.addEventListener('storage', event => {
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { state = readState(); render(); } });
 window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; $('installBtn').classList.remove('hidden'); });
-$('installBtn').addEventListener('click', async () => { if (installPrompt) { await installPrompt.prompt(); installPrompt = null; $('installBtn').classList.add('hidden'); } });
+$('installBtn').addEventListener('click', async () => { if (installPrompt) { await installPrompt.prompt(); installPrompt = null; } else { $('installHint').classList.remove('hidden'); } });
+const settingsNav = document.querySelector('.mobile-nav').cloneNode(true);
+settingsNav.className = 'settings-nav';
+settingsNav.setAttribute('aria-label', 'Settings navigation');
+settingsNav.querySelectorAll('button').forEach(button => {
+  button.classList.toggle('selected', button.hasAttribute('data-settings'));
+  button.setAttribute('aria-current', button.hasAttribute('data-settings') ? 'page' : 'false');
+});
+$('settingsDialog').append(settingsNav);
 loadFields(); setView('dashboard'); render();
 if (storageBroken) toast('Saved workspace could not be read. Existing data has not been overwritten.');
 let lastDay = T.dayKey();

@@ -97,7 +97,7 @@ async function run() {
   await send('Page.reload'); await waitFor(() => evaluate(`document.readyState === 'complete' && !!document.getElementById('quickLabels')?.children.length`), 'theme reload');
   assert.equal(await evaluate(`document.body.dataset.theme`), 'dark');
   assert.equal(await evaluate(`workspace().labels.includes('Research')`), true);
-  await click('[data-settings]'); await click('#themeToggle'); await click('#accountButton');
+  await click('[data-settings]'); await click('[data-theme-choice="light"]'); await click('#accountButton');
   await click('[data-auth="signup"]'); await fill('authUsername', 'claire_test'); await fill('authPassword', 'test-password-123'); await fill('authConfirm', 'test-password-123'); await submit('authForm');
   await waitFor(() => evaluate(`!document.getElementById('authDialog').open`), 'account signup');
   assert.equal(await evaluate(`workspace().entries.length`), 0);
@@ -137,7 +137,7 @@ async function run() {
   assert.equal(await evaluate(`document.getElementById('toggleTrackingBtn').getBoundingClientRect().bottom < window.innerHeight - 70`), true);
   await screenshot('mobile.png');
   await click('.mobile-nav [data-view="summary"]');
-  assert.equal(await evaluate(`getComputedStyle(document.getElementById('trackerSection')).display`), 'none');
+  assert.equal(await evaluate(`document.getElementById('trackerSection').getClientRects().length`), 0);
   await screenshot('mobile-summary.png');
   await click('.mobile-nav [data-settings]'); await click('#themeToggle'); await click('#settingsDialog [data-close]');
   await screenshot('mobile-dark.png');
@@ -148,6 +148,40 @@ async function run() {
   assert.equal(await evaluate(`document.getElementById('editDialog').scrollWidth <= document.getElementById('editDialog').clientWidth`), true);
   await click('#editDialog [data-close]');
   console.log('PASS: mobile layout at 390px/360px, navigation, dark mode, modal fit');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true });
+  await evaluate(`document.fonts.ready`);
+  assert.equal(await evaluate(`document.fonts.check('16px "Geist"') && document.fonts.check('16px "Geist Mono"') && document.fonts.check('16px "Bricolage Grotesque"')`), true);
+  for (const theme of ['light', 'dark']) {
+    await click('.mobile-nav [data-settings]'); await click(`[data-theme-choice="${theme}"]`);
+    await screenshot(`redesign-settings-${theme}.png`);
+    await click('#settingsDialog [data-view="history"]');
+    assert.equal(await evaluate(`document.getElementById('settingsDialog').open`), false);
+    await screenshot(`redesign-blocks-${theme}.png`);
+    await click('[data-edit]');
+    assert.match(await evaluate(`document.getElementById('editReadout').textContent`), /billed/);
+    await screenshot(`redesign-edit-${theme}.png`);
+    await click('#editDialog [data-close]');
+    await click('.mobile-nav [data-view="summary"]');
+    assert.match(await evaluate(`document.getElementById('dateLabel').textContent`), /\d/);
+    await screenshot(`redesign-summary-${theme}.png`);
+    await click('.mobile-nav [data-view="dashboard"]');
+    await screenshot(`redesign-idle-${theme}.png`);
+    await evaluate(`commit(next => { workspace(next).entries.push({ id:'visual-active', title:'Coding', description:'1. Push to github\\n2. Fix the rounding edge case', startedAt:new Date(Date.now()-1450000).toISOString(), endedAt:null }); }); loadFields(); render();`);
+    assert.equal(await evaluate(`document.getElementById('roundedCurrent').textContent`), '0.5h rounded');
+    assert.equal(await evaluate(`document.querySelector('.button-shortcut').getClientRects().length`), 0);
+    await screenshot(`redesign-tracking-${theme}.png`);
+    assert.equal(await evaluate(`document.documentElement.scrollWidth <= window.innerWidth`), true);
+    await evaluate(`commit(next => { workspace(next).entries = workspace(next).entries.filter(entry => entry.id !== 'visual-active'); }); loadFields(); render();`);
+  }
+  await click('.mobile-nav [data-settings]'); await click('[data-theme-choice="system"]');
+  await send('Emulation.setEmulatedMedia', { features: [{ name:'prefers-color-scheme', value:'dark' }] });
+  await waitFor(() => evaluate(`document.body.dataset.theme === 'dark'`), 'system dark mode');
+  await send('Emulation.setEmulatedMedia', { features: [{ name:'prefers-color-scheme', value:'light' }] });
+  await waitFor(() => evaluate(`document.body.dataset.theme === 'light'`), 'system light mode');
+  assert.equal(await evaluate(`document.documentElement.dataset.theme`), 'system');
+  await click('#settingsDialog [data-close]');
+  console.log('PASS: redesign screens in both themes, local fonts, live rounding preview, touch shortcut visibility, system theme');
   await waitFor(() => evaluate(`navigator.serviceWorker.ready.then(() => true)`), 'service worker');
   await send('Page.reload'); await waitFor(() => evaluate(`document.readyState === 'complete' && !!navigator.serviceWorker.controller`), 'service worker control');
   await send('Network.enable'); await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });

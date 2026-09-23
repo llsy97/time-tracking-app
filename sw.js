@@ -1,6 +1,7 @@
 'use strict';
-const CACHE = 'tempo-shell-v5';
+const CACHE = 'tempo-shell-v6';
 const ASSETS = ['./', './index.html', './styles.css', './script.js', './time-utils.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
+ASSETS.push('./assets/tokens.css', './assets/fonts/BricolageGrotesque-Variable.ttf', './assets/fonts/Geist-Variable.ttf', './assets/fonts/GeistMono-Variable.ttf');
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
 });

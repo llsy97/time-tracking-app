@@ -23,7 +23,7 @@ for (const size of [192, 512]) {
       if (Math.abs(Math.hypot(px - 256, py - 256) - 135) < 11.5 || lineDistance(px, py, 256, 171, 256, 259) < 11.5 || lineDistance(px, py, 256, 259, 313, 296) < 11.5) coverage++;
     }
     const offset = y * (size * 3 + 1) + 1 + x * 3;
-    [23, 106, 85].forEach((channel, index) => { pixels[offset + index] = Math.round(channel + (255 - channel) * coverage / 9); });
+    [255, 91, 36].forEach((channel, index) => { pixels[offset + index] = Math.round(channel + ([23, 22, 15][index] - channel) * coverage / 9); });
   }
   const header = Buffer.alloc(13); header.writeUInt32BE(size, 0); header.writeUInt32BE(size, 4); header[8] = 8; header[9] = 2;
   const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', zlib.deflateSync(pixels)), chunk('IEND', Buffer.alloc(0))]);

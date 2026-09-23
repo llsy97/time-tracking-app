@@ -19,6 +19,7 @@
       "preload.js",
       "index.html",
       "styles.css",
+      "assets/**/*",
       "script.js",
       "time-utils.js",
       "icon.svg",

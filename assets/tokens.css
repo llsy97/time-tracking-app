@@ -1,0 +1,147 @@
+/* ==========================================================
+   tempo — design tokens  ·  "Paper · Ink · Signal"
+   Drop this file in the app and import it once, globally.
+   Light is the default; dark applies with <html data-theme="dark">
+   (or automatically via prefers-color-scheme when theme = "system").
+   ========================================================== */
+
+/* ---- Fonts (self-hosted, OFL licensed — files in ./fonts) ---- */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("./fonts/BricolageGrotesque-Variable.ttf") format("truetype");
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("./fonts/Geist-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("./fonts/GeistMono-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  /* ---- Type families ---- */
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif; /* headings, big totals, wordmark */
+  --font-body: "Geist", system-ui, sans-serif;                   /* all UI text */
+  --font-mono: "Geist Mono", ui-monospace, monospace;            /* EVERY time / number / eyebrow label */
+
+  /* ---- Brand ---- */
+  --signal: #FF5B24;        /* the ONE accent: primary buttons, live/recording, seconds digit */
+  --signal-soft: #FF7A4D;   /* signal text on dark surfaces */
+  --signal-tint: rgba(255, 91, 36, 0.12);
+  --on-signal: #17160F;     /* text on signal buttons is INK, never white (contrast) */
+  --paper: #F4F1EA;
+  --danger: #B8341A;
+
+  /* ---- Category colors (label dots, chart segments) ---- */
+  --cat-coding: #FF5B24;
+  --cat-planning: #3D63FF;
+  --cat-meeting: #E8B400;
+  --cat-design: #A77BFF;
+  --cat-email: #2FAE7A;
+  --cat-docs: #8A8579;
+  --cat-review: #FF8FB1;
+  --cat-other: #C9C4B8;
+
+  /* ---- Light theme (default) ---- */
+  --bg: #F4F1EA;            /* paper */
+  --surface: #FBF9F4;       /* cards */
+  --surface-sunk: #ECE8DF;  /* tracks, readouts */
+  --line: #E3DED3;          /* dividers, card borders */
+  --line-strong: #DDD7CA;   /* input + pill borders */
+  --text: #17160F;          /* ink */
+  --text-muted: #6B675C;
+  --inverse-bg: #17160F;    /* the dark timer card inside light mode */
+  --inverse-surface: #22211B;
+  --inverse-line: #34322B;
+  --inverse-text: #F4F1EA;
+  --inverse-muted: #B8B2A4;
+  --colon: #5A574D;         /* dimmed ":" in timers */
+
+  /* ---- Type scale (px) ---- */
+  --fs-hero: 92px;      /* day total "1.7" (unit "h" at 34px, 10px gap) */
+  --fs-total: 64px;     /* summary total */
+  --fs-timer: 58px;     /* idle timer, mono */
+  --fs-timer-live: 70px;/* running timer, mono */
+  --fs-h1: 36px;        /* screen titles */
+  --fs-h2: 30px;        /* sheet titles */
+  --fs-body: 15px;
+  --fs-small: 13px;
+  --fs-caption: 12px;
+  --fs-eyebrow: 11px;   /* mono, UPPERCASE, letter-spacing 0.14em */
+
+  /* ---- Tracking (IMPORTANT: do not go tighter than these) ---- */
+  --tracking-display: -0.025em; /* headings + wordmark */
+  --tracking-number: -0.015em;  /* big totals */
+  --tracking-mono: -0.02em;     /* timers */
+  --tracking-eyebrow: 0.14em;
+
+  /* ---- Radii ---- */
+  --r-sm: 12px;
+  --r-md: 14px;   /* inputs */
+  --r-lg: 18px;   /* primary buttons */
+  --r-xl: 20px;   /* list cards */
+  --r-2xl: 24px;  /* section cards */
+  --r-3xl: 28px;  /* hero timer card */
+  --r-sheet: 30px;
+  --r-pill: 999px;
+
+  /* ---- Spacing ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;  /* screen side padding */
+  --space-6: 24px;
+
+  /* ---- Sizes ---- */
+  --tap: 44px;         /* minimum touch target */
+  --btn-primary: 58px; /* primary button height */
+  --input-h: 50px;
+  --chip-h: 36px;
+  --nav-h: 84px;
+}
+
+/* ---- Dark theme ---- */
+:root[data-theme="dark"] {
+  --bg: #0E0E0C;
+  --surface: #1A1A17;
+  --surface-sunk: #171714;
+  --line: #2B2A26;
+  --line-strong: #3A3833;
+  --text: #F4F1EA;
+  --text-muted: #9C978A;
+  --inverse-bg: #F4F1EA;   /* in dark mode the "inverse" button is paper */
+  --inverse-text: #0E0E0C;
+  --colon: #4A4840;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --bg: #0E0E0C;
+    --surface: #1A1A17;
+    --surface-sunk: #171714;
+    --line: #2B2A26;
+    --line-strong: #3A3833;
+    --text: #F4F1EA;
+    --text-muted: #9C978A;
+    --inverse-bg: #F4F1EA;
+    --inverse-text: #0E0E0C;
+    --colon: #4A4840;
+  }
+}
+
+/* ---- Base ---- */
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+.num, time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }

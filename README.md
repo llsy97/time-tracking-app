@@ -2,6 +2,10 @@
 
 A mobile-first, offline-ready time tracker with an English interface, local accounts, and a responsive desktop layout. Built with plain HTML, CSS, and JavaScript; local mode has no runtime package dependencies or external font requests. The optional Google integration uses Google's official authentication library.
 
+The interface follows the supplied **Paper · Ink · Signal** design: warm paper surfaces, orange accents, a day ribbon, stacked task summaries, a block timeline, and a bottom-sheet editor. Design tokens live in `assets/tokens.css`. Bricolage Grotesque, Geist, and Geist Mono are bundled in `assets/fonts/` with their OFL licenses and cached for offline use. Settings supports Light, Dark, and System appearance.
+
+The handoff's example data is not imported. Existing timestamps, local accounts, custom/deleted labels, and per-block rounding remain unchanged. Notes can be expanded before starting and are visible while tracking. Label remove buttons and full date/time editing are retained; Settings exports the selected day, matching the app's existing export behavior.
+
 ## Run on Windows
 
 Double-click **run_app.bat**. It starts a local Node.js server and opens **http://localhost:4173** in your browser. Keep the server window open while using the app. Node.js 22 or newer is recommended.
@@ -64,6 +68,8 @@ Deploy the following files together on any **HTTPS static host**:
 ```text
 index.html
 styles.css
+assets/tokens.css
+assets/fonts/ (include font files and licenses)
 script.js
 time-utils.js
 sw.js
@@ -89,5 +95,6 @@ npm run test:ui
 - Unit tests cover grouping, overnight blocks, running timers, exact midnight, zero-duration entries, clear-day preservation, invalid intervals, and daylight saving boundaries. Google route tests cover configuration, verification, origin checking, CSRF, nonce mismatch, expiry, and replay prevention.
 - Browser tests run a real, hidden, headless Chromium session using the DevTools protocol. They cover start/stop, reload persistence, editing validation, custom labels, account isolation, password verification, sign-out, deletion, dark mode, mobile widths, and offline reload.
 - The browser runner defaults to Microsoft Edge on Windows. Set `BROWSER_PATH` for a different Chromium executable. It uses ports 4175 and 9225 and isolated test storage under `.artifacts/`, where it also saves screenshots. It does not alter your normal browser data.
+- Visual checks capture idle/tracking, summary, blocks, editing, and settings in light and dark mode at 390px, and verify 360px layout, self-hosted fonts, system-theme changes, and hidden keyboard hints on touch devices.
 
 The app has been checked on Windows with Edge at desktop, 390px, and 360px viewport widths. Physical Android installation and Play Store distribution have not been tested.
