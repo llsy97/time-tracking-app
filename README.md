@@ -53,6 +53,10 @@ Without configuration, the button displays **Setup needed**. Static-only deploym
 
 ## Install on Android / deploy
 
+Live app: **https://llsy97.github.io/time-tracking-app/**
+
+GitHub Pages publishes the `main` branch from the repository root. `.nojekyll` keeps the app's static files unchanged. Push updates to `main` to redeploy. This hosted edition supports local accounts; Google sign-in requires the separate Node backend described above.
+
 Deploy the following files together on any **HTTPS static host**:
 
 ```text
