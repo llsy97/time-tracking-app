@@ -26,12 +26,13 @@
     for (const entry of entries) {
       const title = entry.title.trim() || 'Untitled task';
       const key = title.toLowerCase();
-      if (!groups.has(key)) groups.set(key, { title, ms: 0, count: 0 });
+      if (!groups.has(key)) groups.set(key, { title, ms: 0, count: 0, tenths: 0 });
       const group = groups.get(key);
       group.ms += entry.ms;
+      group.tenths += roundedTenths(entry.ms);
       group.count++;
     }
-    return [...groups.values()].sort((a, b) => b.ms - a.ms);
+    return [...groups.values()].sort((a, b) => b.tenths - a.tenths || b.ms - a.ms);
   }
   function timer(ms) {
     const s = Math.max(0, Math.floor(ms / 1000));

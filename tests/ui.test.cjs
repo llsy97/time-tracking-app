@@ -73,15 +73,15 @@ async function run() {
   // Two manual blocks with the same title should be merged in the summary.
   const yesterday = await evaluate(`(() => { const date = new Date(); date.setDate(date.getDate()-1); return T.dayKey(date); })()`);
   await evaluate(`setDay(${JSON.stringify(yesterday)})`);
-  for (const [start, end] of [['09:00:00', '10:30:00'], ['13:00:00', '14:00:00']]) {
+  for (const [start, end] of [['09:00:00', '09:07:00'], ['13:00:00', '13:07:00']]) {
     await click('#addBlockBtn'); await fill('editTitle', 'Design'); await fill('editDescription', 'Product explorations');
     await fill('editStart', `${yesterday}T${start}`); await fill('editEnd', `${yesterday}T${end}`); await submit('editForm');
     assert.equal(await evaluate(`document.getElementById('editDialog').open`), false);
   }
-  assert.equal(await evaluate(`T.summarize(T.dailyEntries(workspace().entries, selectedDay))[0].ms`), 9000000);
+  assert.equal(await evaluate(`T.summarize(T.dailyEntries(workspace().entries, selectedDay))[0].ms`), 840000);
   assert.equal(await evaluate(`document.querySelectorAll('.summary-row').length`), 1);
-  assert.equal(await evaluate(`document.querySelector('.summary-row strong').textContent`), '2.5h');
-  assert.equal(await evaluate(`document.getElementById('donutTotal').textContent`), '2.5h');
+  assert.equal(await evaluate(`document.querySelector('.summary-row strong').textContent`), '0.4h');
+  assert.equal(await evaluate(`document.getElementById('donutTotal').textContent`), '0.4h');
   await click('[data-edit]'); await fill('editEnd', `${yesterday}T08:00:00`); await submit('editForm');
   assert.match(await evaluate(`document.getElementById('editError').textContent`), /End time/);
   await click('#editDialog [data-close]');

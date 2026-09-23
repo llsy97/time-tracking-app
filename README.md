@@ -28,7 +28,7 @@ Features include editable start/end times, manual blocks, reusable custom labels
 
 Timers use saved timestamps, so closing the app or suspending the device does not lose elapsed time. An overnight block contributes only its portion of time to each local date. Daily boundaries respect daylight saving time. Clearing a date preserves portions on neighboring days; deleting an individual block removes its entire interval. Manually entered overlapping blocks are allowed and are summed independently.
 
-Task summaries and the day total round upward to the next **0.1 hour (6 minutes)** after summing actual time: 57 minutes → 1.0h; 63 minutes → 1.1h. Two 7-minute blocks of the same task total 14 minutes → 0.3h. Individual blocks, timestamps, and the live stopwatch retain actual time. The day total rounds the actual whole-day sum independently, so separately rounded task totals can add up to more than the rounded day total. The chart uses actual time; CSV reports include actual durations and rounded summary hours.
+Each time block rounds upward to the next **0.1 hour (6 minutes)** before adding it to task and day totals: 57 minutes = 1.0h; 63 minutes = 1.1h. Two separate 7-minute blocks each become 0.2h, giving **0.4h** together. Totals sum integer tenths to avoid floating-point drift. Original timestamps and the stopwatch remain exact; blocks show both rounded hours and actual duration. Charts and CSV summary totals use the same rounded-block sums. Overnight blocks are split at local midnight, with each daily portion rounded independently.
 
 ## Accounts and storage
 

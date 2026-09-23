@@ -13,15 +13,20 @@ test('reported hours round upward in six-minute increments', () => {
 });
 test('morning and afternoon work group by normalized title', () => {
   const entries = [entry('2026-09-22T09:00:00', '2026-09-22T10:00:00'), entry('2026-09-22T14:00:00', '2026-09-22T15:30:00', ' coding ', 'two')];
-  assert.deepEqual(T.summarize(T.dailyEntries(entries, '2026-09-22')), [{ title: 'coding', ms: 9000000, count: 2 }]);
+  assert.deepEqual(T.summarize(T.dailyEntries(entries, '2026-09-22')), [{ title: 'coding', ms: 9000000, count: 2, tenths: 25 }]);
 });
-test('rounding is applied after summing repeated tasks, never to individual blocks', () => {
+test('each block rounds up before task totals are summed without changing actual time', () => {
   const entries = [entry('2026-09-22T09:00:00', '2026-09-22T09:07:00'), entry('2026-09-22T14:00:00', '2026-09-22T14:07:00')];
   const original = JSON.stringify(entries);
   const grouped = T.summarize(T.dailyEntries(entries, '2026-09-22'));
-  assert.equal(T.roundedHours(grouped[0].ms), '0.3');
+  assert.equal((grouped[0].tenths / 10).toFixed(1), '0.4');
   assert.equal(grouped[0].ms, 14 * 60000);
   assert.equal(JSON.stringify(entries), original);
+});
+test('day total adds rounded blocks across titles using integer tenths', () => {
+  const groups = T.summarize([{ title: 'Design', ms: 7 * 60000 }, { title: 'Coding', ms: 7 * 60000 }, { title: 'Design', ms: 6 * 60000 }]);
+  assert.equal(groups.reduce((sum, group) => sum + group.tenths, 0), 5);
+  assert.equal(groups.find(group => group.title === 'Design').tenths, 3);
 });
 test('overnight work is clipped to each local day', () => {
   const item = entry('2026-09-22T23:30:00', '2026-09-23T01:00:00');

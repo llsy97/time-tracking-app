@@ -129,30 +129,31 @@ function renderLive() {
   const entries = T.dailyEntries(workspace().entries, selectedDay, now);
   const groups = T.summarize(entries);
   const total = groups.reduce((sum, group) => sum + group.ms, 0);
-  $('totalTracked').innerHTML = `${T.roundedHours(total)}<span>h</span>`;
+  const totalTenths = groups.reduce((sum, group) => sum + group.tenths, 0);
+  $('totalTracked').innerHTML = `${(totalTenths / 10).toFixed(1)}<span>h</span>`;
   $('totalTracked').title = T.timer(total);
-  $('totalCaption').textContent = entries.some(e => !e.endedAt && selectedDay === T.dayKey()) ? 'Tracking live · keep your focus' : entries.length ? `${T.timer(total)} actual · rounded up to 0.1h` : 'A fresh start for your day';
+  $('totalCaption').textContent = entries.some(e => !e.endedAt && selectedDay === T.dayKey()) ? 'Tracking live · keep your focus' : entries.length ? `${T.timer(total)} actual · each block rounded up` : 'A fresh start for your day';
   $('blockCount').textContent = entries.length;
   $('listCount').textContent = entries.length;
   $('blockCaption').textContent = entries.length ? `${groups.length} unique task${groups.length === 1 ? '' : 's'} throughout the day` : 'One task, one moment at a time';
   $('topTask').textContent = groups[0]?.title || 'A clean slate';
-  $('topTaskCaption').textContent = groups.length ? `${T.roundedHours(groups[0].ms)}h · rounded task total` : 'Your focus will show up here';
-  $('donutTotal').textContent = `${T.roundedHours(total)}h`;
+  $('topTaskCaption').textContent = groups.length ? `${(groups[0].tenths / 10).toFixed(1)}h · rounded task total` : 'Your focus will show up here';
+  $('donutTotal').textContent = `${(totalTenths / 10).toFixed(1)}h`;
   $('donutSubtitle').textContent = groups.length ? `${groups.length} task${groups.length === 1 ? '' : 's'} · ${entries.length} block${entries.length === 1 ? '' : 's'}` : 'Make room for focus';
   let position = 0;
   const segments = groups.map(group => {
     const start = position;
-    position += total ? group.ms / total * 100 : 0;
+    position += totalTenths ? group.tenths / totalTenths * 100 : 0;
     return `${color(group.title)} ${start}% ${position}%`;
   });
   $('summaryDonut').style.background = total ? `conic-gradient(${segments.join(',')})` : 'var(--ring)';
   $('summaryList').innerHTML = groups.length ? groups.map(group => {
-    const percentage = total ? Math.round(group.ms / total * 100) : 0;
-    return `<div class="summary-row" style="--color:${color(group.title)}"><div class="summary-row-top"><i class="color-dot"></i><span class="summary-name" title="${escapeHtml(group.title)}">${escapeHtml(group.title)}</span><strong title="Actual: ${T.timer(group.ms)}">${T.roundedHours(group.ms)}h</strong><small>${percentage}%</small></div><div class="progress-track"><div style="width:${percentage}%"></div></div></div>`;
+    const percentage = totalTenths ? Math.round(group.tenths / totalTenths * 100) : 0;
+    return `<div class="summary-row" style="--color:${color(group.title)}"><div class="summary-row-top"><i class="color-dot"></i><span class="summary-name" title="${escapeHtml(group.title)}">${escapeHtml(group.title)}</span><strong title="Actual: ${T.timer(group.ms)}">${(group.tenths / 10).toFixed(1)}h</strong><small>${percentage}%</small></div><div class="progress-track"><div style="width:${percentage}%"></div></div></div>`;
   }).join('') : '<div class="summary-empty"><strong>A little focus starts here.</strong>Track your first task to see<br>how your day comes together.</div>';
   entries.forEach(entry => {
     const durationEl = document.querySelector(`[data-duration="${CSS.escape(entry.id)}"]`);
-    if (durationEl) durationEl.textContent = T.duration(entry.ms);
+    if (durationEl) durationEl.innerHTML = `${T.roundedHours(entry.ms)}h<small class="actual-duration">${T.duration(entry.ms)} actual</small>`;
   });
   $('clearDayBtn').disabled = !entries.length;
   $('exportBtn').disabled = !entries.length;
@@ -161,7 +162,7 @@ function renderEntries() {
   const entries = T.dailyEntries(workspace().entries, selectedDay);
   $('entryList').innerHTML = entries.length ? entries.map(entry => {
     const crossesDay = T.dayKey(entry.startedAt) !== T.dayKey(entry.endedAt || Date.now());
-    return `<article class="entry" style="--color:${color(entry.title)}"><span class="entry-symbol">${icon('clock')}</span><div class="entry-info"><div class="entry-name">${escapeHtml(entry.title)}${!entry.endedAt ? '<span class="entry-live">● Live</span>' : ''}</div>${entry.description ? `<p class="entry-description">${escapeHtml(entry.description)}</p>` : ''}</div><div class="entry-time">${timeLabel(entry.startedAt, crossesDay)} – ${entry.endedAt ? timeLabel(entry.endedAt, crossesDay) : 'Now'}${crossesDay ? '<br>Duration shown for selected day' : ''}</div><div class="entry-duration" data-duration="${escapeHtml(entry.id)}">${T.duration(entry.ms)}</div><div class="entry-actions"><button class="icon-button" data-edit="${escapeHtml(entry.id)}" aria-label="Edit ${escapeHtml(entry.title)}">${icon('edit')}</button><button class="icon-button danger" data-delete="${escapeHtml(entry.id)}" aria-label="Delete ${escapeHtml(entry.title)}">${icon('trash')}</button></div></article>`;
+    return `<article class="entry" style="--color:${color(entry.title)}"><span class="entry-symbol">${icon('clock')}</span><div class="entry-info"><div class="entry-name">${escapeHtml(entry.title)}${!entry.endedAt ? '<span class="entry-live">● Live</span>' : ''}</div>${entry.description ? `<p class="entry-description">${escapeHtml(entry.description)}</p>` : ''}</div><div class="entry-time">${timeLabel(entry.startedAt, crossesDay)} – ${entry.endedAt ? timeLabel(entry.endedAt, crossesDay) : 'Now'}${crossesDay ? '<br>Duration shown for selected day' : ''}</div><div class="entry-duration" data-duration="${escapeHtml(entry.id)}">${T.roundedHours(entry.ms)}h<small class="actual-duration">${T.duration(entry.ms)} actual</small></div><div class="entry-actions"><button class="icon-button" data-edit="${escapeHtml(entry.id)}" aria-label="Edit ${escapeHtml(entry.title)}">${icon('edit')}</button><button class="icon-button danger" data-delete="${escapeHtml(entry.id)}" aria-label="Delete ${escapeHtml(entry.title)}">${icon('trash')}</button></div></article>`;
   }).join('') : `<div class="empty-blocks"><div class="empty-clock">${icon('clock')}</div><h3>Your day is a blank canvas.</h3><p>Start the timer or add a block.<br>We’ll keep the details so you don’t have to.</p></div>`;
 }
 function render() {
@@ -367,12 +368,12 @@ function signOut() {
 function exportDay() {
   const entries = T.dailyEntries(workspace().entries, selectedDay);
   const csvCell = value => '"' + String(value).replace(/^[=+@\-\t\r]/, x => "'" + x).replace(/"/g, '""') + '"';
-  const rows = [['Date', 'Title', 'Description', 'Start (local)', 'End (local)', 'Duration for selected day', 'Seconds']];
-  entries.forEach(e => rows.push([selectedDay, e.title, e.description, T.localInput(e.startedAt), e.endedAt ? T.localInput(e.endedAt) : 'In progress', T.timer(e.ms), Math.floor(e.ms / 1000)]));
-  rows.push([], ['Daily summary'], ['Title', 'Actual total duration', 'Actual seconds', 'Blocks', 'Rounded hours (0.1h, after summing)']);
-  T.summarize(entries).forEach(g => rows.push([g.title, T.timer(g.ms), Math.floor(g.ms / 1000), g.count, T.roundedHours(g.ms)]));
+  const rows = [['Date', 'Title', 'Description', 'Start (local)', 'End (local)', 'Actual duration for selected day', 'Actual seconds', 'Rounded hours (0.1h per block)']];
+  entries.forEach(e => rows.push([selectedDay, e.title, e.description, T.localInput(e.startedAt), e.endedAt ? T.localInput(e.endedAt) : 'In progress', T.timer(e.ms), Math.floor(e.ms / 1000), T.roundedHours(e.ms)]));
+  rows.push([], ['Daily summary'], ['Title', 'Actual total duration', 'Actual seconds', 'Blocks', 'Rounded hours (sum of rounded blocks)']);
+  T.summarize(entries).forEach(g => rows.push([g.title, T.timer(g.ms), Math.floor(g.ms / 1000), g.count, (g.tenths / 10).toFixed(1)]));
   const actualTotal = entries.reduce((sum, entry) => sum + entry.ms, 0);
-  rows.push([], ['Day total', 'Actual duration', 'Rounded hours (0.1h, after summing)'], [selectedDay, T.timer(actualTotal), T.roundedHours(actualTotal)]);
+  rows.push([], ['Day total', 'Actual duration', 'Rounded hours (sum of rounded blocks)'], [selectedDay, T.timer(actualTotal), (entries.reduce((sum, entry) => sum + T.roundedTenths(entry.ms), 0) / 10).toFixed(1)]);
   const blob = new Blob(['\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `tempo-${selectedDay}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); toast('Daily report exported.');
 }
