@@ -28,6 +28,8 @@ Features include editable start/end times, manual blocks, reusable custom labels
 
 Timers use saved timestamps, so closing the app or suspending the device does not lose elapsed time. An overnight block contributes only its portion of time to each local date. Daily boundaries respect daylight saving time. Clearing a date preserves portions on neighboring days; deleting an individual block removes its entire interval. Manually entered overlapping blocks are allowed and are summed independently.
 
+Task summaries and the day total round upward to the next **0.1 hour (6 minutes)** after summing actual time: 57 minutes → 1.0h; 63 minutes → 1.1h. Two 7-minute blocks of the same task total 14 minutes → 0.3h. Individual blocks, timestamps, and the live stopwatch retain actual time. The day total rounds the actual whole-day sum independently, so separately rounded task totals can add up to more than the rounded day total. The chart uses actual time; CSV reports include actual durations and rounded summary hours.
+
 ## Accounts and storage
 
 Open **Settings → Sign in or create an account**. Usernames are case-insensitive. Passwords require at least eight characters and are stored as salted PBKDF2-SHA-256 hashes (210,000 iterations), never as plaintext. Guest and account workspaces are separate. Switching accounts or signing out saves and stops any running timer. Sessions, labels, drafts, records, and theme survive reopening.

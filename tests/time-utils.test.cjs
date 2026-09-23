@@ -3,9 +3,25 @@ const assert = require('node:assert/strict');
 process.env.TZ = 'America/Denver';
 const T = require('../time-utils.js');
 const entry = (start, end, title = 'Coding', id = 'one') => ({ id, title, description: '', startedAt: new Date(start).toISOString(), endedAt: end ? new Date(end).toISOString() : null });
+test('reported hours round upward in six-minute increments', () => {
+  for (const [minutes, expected] of [[0, '0.0'], [1, '0.1'], [6, '0.1'], [7, '0.2'], [54, '0.9'], [57, '1.0'], [60, '1.0'], [63, '1.1'], [66, '1.1']]) {
+    assert.equal(T.roundedHours(minutes * 60000), expected);
+  }
+  assert.equal(T.roundedHours(360000 + 1), '0.2');
+  assert.equal(T.roundedHours(3600000 + 1000), '1.1');
+  assert.equal(T.roundedHours(-1000), '0.0');
+});
 test('morning and afternoon work group by normalized title', () => {
   const entries = [entry('2026-09-22T09:00:00', '2026-09-22T10:00:00'), entry('2026-09-22T14:00:00', '2026-09-22T15:30:00', ' coding ', 'two')];
   assert.deepEqual(T.summarize(T.dailyEntries(entries, '2026-09-22')), [{ title: 'coding', ms: 9000000, count: 2 }]);
+});
+test('rounding is applied after summing repeated tasks, never to individual blocks', () => {
+  const entries = [entry('2026-09-22T09:00:00', '2026-09-22T09:07:00'), entry('2026-09-22T14:00:00', '2026-09-22T14:07:00')];
+  const original = JSON.stringify(entries);
+  const grouped = T.summarize(T.dailyEntries(entries, '2026-09-22'));
+  assert.equal(T.roundedHours(grouped[0].ms), '0.3');
+  assert.equal(grouped[0].ms, 14 * 60000);
+  assert.equal(JSON.stringify(entries), original);
 });
 test('overnight work is clipped to each local day', () => {
   const item = entry('2026-09-22T23:30:00', '2026-09-23T01:00:00');

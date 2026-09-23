@@ -43,6 +43,12 @@
     if (s < 3600) return `${Math.floor(s / 60)}m ${pad(s % 60)}s`;
     return `${Math.floor(s / 3600)}h ${pad(Math.floor(s / 60) % 60)}m`;
   }
+  function roundedTenths(ms) {
+    return Math.ceil(Math.max(0, ms) / 360000);
+  }
+  function roundedHours(ms) {
+    return (roundedTenths(ms) / 10).toFixed(1);
+  }
   function localInput(value) {
     const d = new Date(value);
     return `${dayKey(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -60,7 +66,7 @@
       return remaining;
     });
   }
-  const api = { dayKey, dayBounds, sliceForDay, dailyEntries, summarize, timer, duration, localInput, clearDay };
+  const api = { dayKey, dayBounds, sliceForDay, dailyEntries, summarize, timer, duration, roundedTenths, roundedHours, localInput, clearDay };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TempoTime = api;
 })(typeof window === 'undefined' ? globalThis : window);

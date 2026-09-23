@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'tempo-shell-v3';
+const CACHE = 'tempo-shell-v4';
 const ASSETS = ['./', './index.html', './styles.css', './script.js', './time-utils.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));

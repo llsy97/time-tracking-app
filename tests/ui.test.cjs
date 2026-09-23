@@ -80,6 +80,8 @@ async function run() {
   }
   assert.equal(await evaluate(`T.summarize(T.dailyEntries(workspace().entries, selectedDay))[0].ms`), 9000000);
   assert.equal(await evaluate(`document.querySelectorAll('.summary-row').length`), 1);
+  assert.equal(await evaluate(`document.querySelector('.summary-row strong').textContent`), '2.5h');
+  assert.equal(await evaluate(`document.getElementById('donutTotal').textContent`), '2.5h');
   await click('[data-edit]'); await fill('editEnd', `${yesterday}T08:00:00`); await submit('editForm');
   assert.match(await evaluate(`document.getElementById('editError').textContent`), /End time/);
   await click('#editDialog [data-close]');
