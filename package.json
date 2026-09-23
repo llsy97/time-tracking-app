@@ -1,0 +1,37 @@
+{
+  "name": "time-keeping-app",
+  "version": "1.0.0",
+  "description": "Tempo: an offline-ready mobile-first time tracker with local accounts and daily summaries.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "node server.js",
+    "web": "node server.js --open",
+    "test": "node --test --test-isolation=none tests/time-utils.test.cjs tests/google-auth.test.cjs",
+    "test:ui": "node tests/ui.test.cjs",
+    "build": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "app.tempo.local",
+    "productName": "Tempo",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "script.js",
+      "time-utils.js",
+      "icon.svg",
+      "icon-192.png",
+      "icon-512.png",
+      "manifest.webmanifest"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^31.7.1",
+    "electron-builder": "^24.13.0"
+  },
+  "dependencies": {
+    "google-auth-library": "^11.1.0"
+  }
+}

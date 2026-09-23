@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#166858">
+  <meta name="description" content="A little focus. A clearer day. Track your work and see where your time goes with Tempo.">
+  <title>Tempo — Make time count</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10m8 10V4m8 16v-7"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-4-4L5 15z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19C-1 6 10 3 21 3c0 12-4 19-13 15m-4 3L17 8"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+  </defs></svg>
+  <aside class="sidebar">
+    <a class="brand" href="#" aria-label="Tempo home"><span class="brand-mark"><svg><use href="#i-clock"/></svg></span>tempo<span class="brand-period">.</span></a>
+    <p class="brand-caption">MAKE TIME COUNT</p><div class="nav-label">WORKSPACE</div>
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <button class="nav-item selected" data-view="dashboard"><svg><use href="#i-grid"/></svg>Overview<span class="nav-dot"></span></button>
+      <button class="nav-item" data-view="summary"><svg><use href="#i-chart"/></svg>Daily summary</button>
+      <button class="nav-item" data-view="history"><svg><use href="#i-clock"/></svg>Time blocks</button>
+      <button class="nav-item" data-settings><svg><use href="#i-settings"/></svg>Settings</button>
+    </nav>
+    <div class="sidebar-bottom"><div class="focus-note"><svg><use href="#i-leaf"/></svg><h3>Small moments.<br>Meaningful progress.</h3><p>Give your work a little focus.<br>We’ll keep track of the time.</p></div><button class="profile" data-account><span class="avatar" id="avatar">Y</span><span><strong id="profileName">Your workspace</strong><small id="profileStatus">Saved on this device</small></span><svg><use href="#i-arrow"/></svg></button></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><div class="mobile-brand brand"><span class="brand-mark"><svg><use href="#i-clock"/></svg></span>tempo.</div><div class="breadcrumb">Workspace <span>/</span> <strong id="pageCrumb">Overview</strong></div><div class="topbar-right"><span class="local-status"><i></i> Local workspace</span><button class="icon-button" data-settings aria-label="Open settings"><svg><use href="#i-settings"/></svg></button></div></header>
+    <main>
+      <section class="page-heading"><div><div class="eyebrow">A LITTLE FOCUS GOES A LONG WAY</div><h1 id="pageTitle">Your day, at a glance<span>.</span></h1><p id="pageSubtitle">Less watching the clock. More time for what matters.</p></div><div class="date-control"><button id="previousDay" class="icon-button" aria-label="Previous day"><svg class="rotate"><use href="#i-arrow"/></svg></button><label class="date-picker"><svg><use href="#i-calendar"/></svg><span id="dateLabel"></span><input id="dayFilter" type="date" aria-label="Select day"></label><button id="nextDay" class="icon-button" aria-label="Next day"><svg><use href="#i-arrow"/></svg></button></div></section>
+      <section class="stats-grid" aria-label="Daily totals">
+        <article class="stat-card"><div class="stat-top"><span>Total tracked</span><span class="stat-icon green"><svg><use href="#i-clock"/></svg></span></div><div class="stat-value" id="totalTracked">0<span>h</span> 00<span>m</span></div><div class="stat-caption"><span class="tiny-dot"></span><span id="totalCaption">A fresh start for your day</span></div></article>
+        <article class="stat-card"><div class="stat-top"><span>Time blocks</span><span class="stat-icon purple"><svg><use href="#i-grid"/></svg></span></div><div class="stat-value" id="blockCount">0</div><div class="stat-caption" id="blockCaption">One task, one moment at a time</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Most time spent</span><span class="stat-icon amber"><svg><use href="#i-chart"/></svg></span></div><div class="stat-value task-stat" id="topTask">A clean slate</div><div class="stat-caption" id="topTaskCaption">Your focus will show up here</div></article>
+      </section>
+      <div class="dashboard-grid">
+        <section class="card tracker-panel" id="trackerSection"><div class="section-heading"><h2>Time to focus</h2><span class="status-pill" id="trackingStatus"><i></i> Ready when you are</span></div><div class="timer-area"><div class="timer" id="timerDisplay">00<span>:</span>00<span>:</span>00</div><p id="timerHint">One task. One timer. A little more clarity.</p></div>
+          <label class="field"><span>What are you working on?</span><input id="taskTitle" maxlength="80" placeholder="Give your task a name…" autocomplete="off"></label>
+          <div class="label-heading">Quick labels <span>Pick one or make it yours</span></div><div id="quickLabels" class="chips"></div>
+          <label class="field description-field"><span>Description <small>OPTIONAL</small></span><textarea id="taskDescription" rows="2" maxlength="2000" placeholder="A few details to remember later…"></textarea></label>
+          <button id="toggleTrackingBtn" class="primary start-button"><span class="play-symbol"></span><span id="trackingButtonText">Start tracking</span><span class="button-shortcut">↵</span></button><p class="tracker-footnote"><svg><use href="#i-check"/></svg> Your time is saved automatically, even if you close the app.</p>
+        </section>
+        <section class="card summary-panel" id="summarySection"><div class="section-heading"><div><h2>Daily breakdown</h2><p>Your time, thoughtfully put together.</p></div><svg class="muted-icon"><use href="#i-chart"/></svg></div><div class="donut-wrap"><div class="donut" id="summaryDonut"><div class="donut-center"><span>TOTAL TIME</span><strong id="donutTotal">0h 00m</strong><small id="donutSubtitle">Make room for focus</small></div></div></div><div id="summaryList" class="summary-list"></div><div class="summary-footer"><svg><use href="#i-check"/></svg> Same task name? We’ll add the time together.</div></section>
+      </div>
+      <section class="card blocks-panel" id="blocksSection"><div class="section-heading"><div class="blocks-heading"><h2>Time blocks</h2><span class="count-badge" id="listCount">0</span></div><div class="block-tools"><button class="text-button" id="addBlockBtn"><svg><use href="#i-plus"/></svg>Add block</button><button class="text-button muted" id="exportBtn"><svg><use href="#i-download"/></svg><span>Export</span></button><button class="text-button danger" id="clearDayBtn">Clear day</button></div></div><div id="entryList" class="entry-list"></div></section>
+      <footer class="page-footer"><span><svg><use href="#i-leaf"/></svg> A little intention makes a big difference.</span><span>Made for your everyday.</span></footer>
+    </main>
+  </div>
+  <nav class="mobile-nav" aria-label="Mobile navigation"><button class="selected" data-view="dashboard"><svg><use href="#i-grid"/></svg>Overview</button><button data-view="summary"><svg><use href="#i-chart"/></svg>Summary</button><button data-view="history"><svg><use href="#i-clock"/></svg>Blocks</button><button data-settings><svg><use href="#i-settings"/></svg>Settings</button></nav>
+  <dialog id="editDialog"><form id="editForm"><div class="dialog-heading"><div><div class="eyebrow">MAKE IT ACCURATE</div><h2 id="editHeading">Edit time block</h2></div><button type="button" class="close-button" data-close aria-label="Close">×</button></div><label class="field"><span>Title</span><input id="editTitle" maxlength="80" required></label><label class="field"><span>Description <small>OPTIONAL</small></span><textarea id="editDescription" maxlength="2000" rows="3"></textarea></label><div class="split-fields"><label class="field"><span>Start time</span><input id="editStart" type="datetime-local" step="1" required></label><label class="field"><span>End time</span><input id="editEnd" type="datetime-local" step="1" required></label></div><p id="editError" class="form-error" role="alert"></p><div class="dialog-actions"><button class="secondary" type="button" data-close>Cancel</button><button class="primary" type="submit">Save block</button></div></form></dialog>
+  <dialog id="labelDialog"><form id="labelForm"><div class="dialog-heading"><h2>A label of your own</h2><button type="button" class="close-button" data-close aria-label="Close">×</button></div><p class="dialog-copy">Save a go-to task for next time.</p><label class="field"><span>Label name</span><input id="labelName" maxlength="40" placeholder="e.g. Research" required></label><p id="labelError" class="form-error" role="alert"></p><button type="submit" class="primary full-width">Create label</button></form></dialog>
+  <dialog id="settingsDialog"><div class="dialog-heading"><div><div class="eyebrow">YOUR WORKSPACE, YOUR WAY</div><h2>Settings</h2></div><button class="close-button" data-close aria-label="Close">×</button></div><div class="settings-row"><div><strong>Dark mode</strong><p>A softer glow for late-night focus.</p></div><button id="themeToggle" class="switch" role="switch" aria-checked="false" aria-label="Dark mode"><span></span></button></div><div class="settings-row"><div><strong id="settingsAccount">Your local workspace</strong><p id="settingsAccountHint">Create an account to keep separate workspaces.</p></div></div><button id="accountButton" class="secondary full-width">Sign in or create an account</button><button id="signOutBtn" class="secondary full-width hidden">Sign out</button><div class="settings-row"><div><strong>Take Tempo with you</strong><p>Install from Chrome’s menu on Android for a full-screen experience.</p></div></div><button id="installBtn" class="secondary full-width hidden">Install Tempo</button><div class="privacy-note"><svg><use href="#i-check"/></svg><p>Your records stay in this browser on this device. Export regularly to keep a copy. Local accounts do not sync across devices.</p></div><div class="settings-brand">tempo. <span>YOUR TIME, WELL SPENT.</span></div></dialog>
+  <dialog id="authDialog"><form id="authForm"><div class="dialog-heading"><span class="brand"><span class="brand-mark"><svg><use href="#i-clock"/></svg></span>tempo.</span><button type="button" class="close-button" data-close aria-label="Close">×</button></div><h2 id="authHeading">Welcome back.</h2><p id="authCopy" class="dialog-copy">A clearer day starts here. Sign in to your local workspace.</p><div class="auth-tabs"><button type="button" class="selected" data-auth="signin">Sign in</button><button type="button" data-auth="signup">Create account</button></div><label class="field"><span>Username</span><input id="authUsername" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_.-]+" title="Use letters, numbers, dots, underscores, or hyphens." required></label><label class="field"><span>Password</span><input id="authPassword" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></label><label class="field hidden" id="confirmField"><span>Confirm password</span><input id="authConfirm" type="password" autocomplete="new-password" maxlength="128"></label><p id="authError" class="form-error" role="alert"></p><button class="primary full-width" id="authSubmit" type="submit">Sign in</button><div class="divider"><span>or</span></div><button id="googleSignIn" class="google-button full-width" type="button"><span class="google-g">G</span>Continue with Google<span class="integration-tag">Setup needed</span></button><p id="googleInfo" class="privacy-copy hidden" role="status">Google sign-in is not connected in this local edition. It requires a Google OAuth client and a server that verifies Google credentials. You can use a local account now.</p><p class="privacy-copy">Accounts and records are saved only on this device. A local account is not a cloud backup.</p></form></dialog>
+  <dialog id="confirmDialog"><form id="confirmForm"><div class="dialog-heading"><h2 id="confirmTitle">Delete block?</h2><button type="button" class="close-button" data-close aria-label="Close">×</button></div><p id="confirmCopy" class="dialog-copy"></p><div class="dialog-actions"><button class="secondary" data-close type="button">Cancel</button><button id="confirmAction" class="primary destructive" type="submit">Delete</button></div></form></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="time-utils.js"></script><script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "Tempo — Make time count",
+  "short_name": "Tempo",
+  "description": "A little focus. A clearer day. Your daily time tracking companion.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f8fa",
+  "theme_color": "#166858",
+  "lang": "en",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
