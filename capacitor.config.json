@@ -1,0 +1,8 @@
+{
+  "appId": "app.moa.timetracker",
+  "appName": "moa",
+  "webDir": "dist/mobile",
+  "plugins": {
+    "SystemBars": { "insetsHandling": "native" }
+  }
+}

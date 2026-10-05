@@ -66,7 +66,7 @@
   --colon: #5A574D;         /* dimmed ":" in timers */
 
   /* ---- Type scale (px) ---- */
-  --fs-hero: 92px;      /* day total "1.7" (unit "h" at 34px, 10px gap) */
+  --fs-hero: 72px;      /* day total "1.7" (unit "h" at 34px, 10px gap) */
   --fs-total: 64px;     /* summary total */
   --fs-timer: 58px;     /* idle timer, mono */
   --fs-timer-live: 70px;/* running timer, mono */

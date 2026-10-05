@@ -1,7 +1,7 @@
 {
   "name": "time-keeping-app",
   "version": "1.0.0",
-  "description": "Tempo: an offline-ready mobile-first time tracker with local accounts and daily summaries.",
+  "description": "moa: an offline-ready mobile-first time tracker with local accounts and daily summaries.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -9,11 +9,13 @@
     "web": "node server.js --open",
     "test": "node --test --test-isolation=none tests/time-utils.test.cjs tests/google-auth.test.cjs",
     "test:ui": "node tests/ui.test.cjs",
-    "build": "electron-builder --win portable"
+    "build": "electron-builder --win portable",
+    "android:sync": "node tools/prepare-android.cjs && cap sync android",
+    "android:apk": "npm run android:sync && node tools/build-android.cjs"
   },
   "build": {
     "appId": "app.tempo.local",
-    "productName": "Tempo",
+    "productName": "moa",
     "files": [
       "main.js",
       "preload.js",
@@ -25,14 +27,21 @@
       "icon.svg",
       "icon-192.png",
       "icon-512.png",
-      "manifest.webmanifest"
+      "manifest.webmanifest",
+      "icon-maskable-512.png",
+      "favicon-48.png"
     ]
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "electron": "^31.7.1",
     "electron-builder": "^24.13.0"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/share": "^8.0.3",
     "google-auth-library": "^11.1.0"
   }
 }

@@ -17,7 +17,7 @@ const googleRoutes = require('./google-auth.js').createGoogleRoutes({
   origins: process.env.APP_ORIGIN ? [process.env.APP_ORIGIN] : [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`],
   verifyToken,
 });
-const PUBLIC_FILES = new Set(['index.html', 'styles.css', 'script.js', 'time-utils.js', 'manifest.webmanifest', 'sw.js', 'icon.svg', 'icon-192.png', 'icon-512.png']);
+const PUBLIC_FILES = new Set(['index.html', 'styles.css', 'script.js', 'time-utils.js', 'manifest.webmanifest', 'sw.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'favicon-48.png', 'assets/logo/moa-mark-ink.svg', 'assets/logo/moa-mark-paper.svg']);
 ['assets/tokens.css', 'assets/fonts/BricolageGrotesque-Variable.ttf', 'assets/fonts/Geist-Variable.ttf', 'assets/fonts/GeistMono-Variable.ttf'].forEach(file => PUBLIC_FILES.add(file));
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 TYPES['.ttf'] = 'font/ttf';
@@ -39,7 +39,7 @@ server.on('error', error => {
 });
 server.listen(PORT, HOST, () => {
   const url = `http://localhost:${PORT}`;
-  console.log(`Tempo is ready at ${url}\nKeep this window open. Press Ctrl+C to stop.`);
+  console.log(`moa is ready at ${url}\nKeep this window open. Press Ctrl+C to stop.`);
   if (process.argv.includes('--open')) {
     if (process.platform === 'win32') spawn('explorer.exe', [url], { windowsHide: true, stdio: 'ignore' }).on('error', () => {});
     else spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], { stdio: 'ignore' }).on('error', () => {});

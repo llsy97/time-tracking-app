@@ -11,6 +11,13 @@ test('reported hours round upward in six-minute increments', () => {
   assert.equal(T.roundedHours(3600000 + 1000), '1.1');
   assert.equal(T.roundedHours(-1000), '0.0');
 });
+test('exact duration preserves seconds without rounding up', () => {
+  assert.equal(T.exactDuration(7 * 60000), '7m');
+  assert.equal(T.exactDuration(14 * 60000), '14m');
+  assert.equal(T.exactDuration(5766000), '1h 36m 6s');
+  assert.equal(T.exactDuration(3600000), '1h');
+  assert.equal(T.exactDuration(0), '0s');
+});
 test('morning and afternoon work group by normalized title', () => {
   const entries = [entry('2026-09-22T09:00:00', '2026-09-22T10:00:00'), entry('2026-09-22T14:00:00', '2026-09-22T15:30:00', ' coding ', 'two')];
   assert.deepEqual(T.summarize(T.dailyEntries(entries, '2026-09-22')), [{ title: 'coding', ms: 9000000, count: 2, tenths: 25 }]);

@@ -1,10 +1,10 @@
-# Tempo — Make time count
+# moa — Gather your time. Wrap your day.
 
 A mobile-first, offline-ready time tracker with an English interface, local accounts, and a responsive desktop layout. Built with plain HTML, CSS, and JavaScript; local mode has no runtime package dependencies or external font requests. The optional Google integration uses Google's official authentication library.
 
 The interface follows the supplied **Paper · Ink · Signal** design: warm paper surfaces, orange accents, a day ribbon, stacked task summaries, a block timeline, and a bottom-sheet editor. Design tokens live in `assets/tokens.css`. Bricolage Grotesque, Geist, and Geist Mono are bundled in `assets/fonts/` with their OFL licenses and cached for offline use. Settings supports Light, Dark, and System appearance.
 
-The handoff's example data is not imported. Existing timestamps, local accounts, custom/deleted labels, and per-block rounding remain unchanged. Notes can be expanded before starting and are visible while tracking. Label remove buttons and full date/time editing are retained; Settings exports the selected day, matching the app's existing export behavior.
+The handoff's example data is not imported. Existing timestamps, local accounts, custom/deleted labels, and per-block rounding remain unchanged. Notes can be expanded using the notes button; starting or stopping keeps the same layout. Label remove buttons and full date/time editing are retained; Settings exports the selected day, matching the app's existing export behavior.
 
 ## Run on Windows
 
@@ -18,7 +18,7 @@ npm run web
 
 `npm run dev` starts the same server without opening a browser. `npm start` runs the optional Electron desktop edition after `npm install`. `npm run build` builds a Windows portable Electron app. This environment's existing Electron installation is incomplete; the dependency-free browser launcher is the verified run path.
 
-The browser and Electron editions use separate storage. Always open the same edition and browser profile to access your saved records. The former `desktop_app.py` Tkinter application remains in the repository, but `run_app.bat` now opens Tempo.
+The browser and Electron editions use separate storage. Always open the same edition and browser profile to access your saved records. The former `desktop_app.py` Tkinter application remains in the repository, but `run_app.bat` now opens moa.
 
 ## Everyday workflow
 
@@ -98,3 +98,7 @@ npm run test:ui
 - Visual checks capture idle/tracking, summary, blocks, editing, and settings in light and dark mode at 390px, and verify 360px layout, self-hosted fonts, system-theme changes, and hidden keyboard hints on touch devices.
 
 The app has been checked on Windows with Edge at desktop, 390px, and 360px viewport widths. Physical Android installation and Play Store distribution have not been tested.
+
+## Android APK
+
+See [ANDROID.md](ANDROID.md) for signed APK builds, installation, storage differences and updates. Run `npm run android:apk` to build.

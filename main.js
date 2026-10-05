@@ -7,7 +7,7 @@ function createWindow() {
     height: 920,
     minWidth: 360,
     minHeight: 640,
-    title: 'Tempo — Make time count',
+    title: 'moa — Gather your time. Wrap your day.',
     backgroundColor: '#F4F1EA',
     webPreferences: {
       contextIsolation: true,

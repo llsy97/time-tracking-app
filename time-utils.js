@@ -50,6 +50,13 @@
   function roundedHours(ms) {
     return (roundedTenths(ms) / 10).toFixed(1);
   }
+  function exactDuration(ms) {
+    const seconds = Math.max(0, Math.floor(ms / 1000));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor(seconds / 60) % 60;
+    const remainder = seconds % 60;
+    return [hours ? `${hours}h` : '', minutes ? `${minutes}m` : '', remainder || !seconds ? `${remainder}s` : ''].filter(Boolean).join(' ');
+  }
   function localInput(value) {
     const d = new Date(value);
     return `${dayKey(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -67,7 +74,7 @@
       return remaining;
     });
   }
-  const api = { dayKey, dayBounds, sliceForDay, dailyEntries, summarize, timer, duration, roundedTenths, roundedHours, localInput, clearDay };
+  const api = { dayKey, dayBounds, sliceForDay, dailyEntries, summarize, timer, duration, roundedTenths, roundedHours, exactDuration, localInput, clearDay };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TempoTime = api;
 })(typeof window === 'undefined' ? globalThis : window);

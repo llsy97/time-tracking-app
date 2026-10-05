@@ -48,6 +48,30 @@ async function run() {
   await send('Page.navigate', { url: 'http://127.0.0.1:4175' });
   await waitFor(() => evaluate(`document.readyState === 'complete' && !!document.getElementById('quickLabels')?.children.length`), 'app ready');
   assert.equal(await evaluate(`document.getElementById('blockCount').textContent`), '0');
+  const reloadApp = async () => {
+    await send('Page.reload');
+    await waitFor(() => evaluate(`document.readyState === 'complete' && !!document.getElementById('quickLabels')?.children.length`), 'navigation reload');
+  };
+  for (const view of ['summary', 'history', 'dashboard']) {
+    await click(`.mobile-nav [data-view="${view}"]`);
+    await reloadApp();
+    assert.equal(await evaluate(`document.body.dataset.view`), view);
+    assert.equal(await evaluate(`document.querySelector('.mobile-nav .selected').dataset.view`), view);
+  }
+  await click('.mobile-nav [data-view="history"]');
+  await click('.mobile-nav [data-settings]');
+  await reloadApp();
+  assert.equal(await evaluate(`document.getElementById('settingsDialog').open`), true);
+  await click('#settingsDialog [data-close]');
+  await waitFor(() => evaluate(`!document.body.classList.contains('settings-open')`), 'settings closed');
+  await reloadApp();
+  assert.equal(await evaluate(`document.body.dataset.view`), 'history');
+  assert.equal(await evaluate(`document.getElementById('settingsDialog').open`), false);
+  await evaluate(`sessionStorage.setItem(NAVIGATION_STORE, '{"view":"invalid","settings":true}')`);
+  await reloadApp();
+  assert.equal(await evaluate(`document.body.dataset.view`), 'dashboard');
+  assert.equal(await evaluate(`document.getElementById('settingsDialog').open`), false);
+  console.log('PASS: all tabs survive refresh, settings restores and closes, invalid navigation falls back safely');
   await screenshot('desktop-empty.png');
   await click('#toggleTrackingBtn');
   assert.equal(await evaluate(`!!activeEntry()`), true);
@@ -82,6 +106,32 @@ async function run() {
   assert.equal(await evaluate(`document.querySelectorAll('.summary-row').length`), 1);
   assert.equal(await evaluate(`document.querySelector('.summary-row strong').textContent`), '0.4h');
   assert.equal(await evaluate(`document.getElementById('donutTotal').textContent`), '0.4h');
+  const rawEntries = await evaluate(`JSON.stringify(workspace().entries)`);
+  await click('#roundingToggle');
+  assert.equal(await evaluate(`document.getElementById('donutTotal').textContent`), '14m');
+  assert.equal(await evaluate(`JSON.stringify(workspace().entries)`), rawEntries);
+  await reloadApp();
+  assert.equal(await evaluate(`state.roundUp`), false);
+  await evaluate(`setDay(${JSON.stringify(yesterday)})`);
+  assert.equal(await evaluate(`document.getElementById('donutTotal').textContent`), '14m');
+  const nativeExport = await evaluate(`(async () => {
+    const original = window.Capacitor;
+    let written, shared;
+    window.Capacitor = { isNativePlatform: () => true, Plugins: {
+      Filesystem: { writeFile: async options => { written = options; return { uri: 'content://moa/report.csv' }; } },
+      Share: { share: async options => { shared = options; } }
+    } };
+    try { await exportDay(); return { written, shared }; }
+    finally { window.Capacitor = original; }
+  })()`);
+  assert.match(nativeExport.written.data, /Exact duration/);
+  assert.match(nativeExport.written.data, /14m/);
+  assert.equal(nativeExport.written.directory, 'CACHE');
+  assert.deepEqual(nativeExport.shared.files, ['content://moa/report.csv']);
+  await click('#roundingToggle');
+  assert.equal(await evaluate(`document.getElementById('donutTotal').textContent`), '0.4h');
+  assert.equal(await evaluate(`JSON.stringify(workspace().entries)`), rawEntries);
+  console.log('PASS: exact/rounded setting persists without changing records; Android CSV share bridge');
   await click('[data-edit]'); await fill('editEnd', `${yesterday}T08:00:00`); await submit('editForm');
   assert.match(await evaluate(`document.getElementById('editError').textContent`), /End time/);
   await click('#editDialog [data-close]');
@@ -169,7 +219,7 @@ async function run() {
     await screenshot(`redesign-idle-${theme}.png`);
     await evaluate(`commit(next => { workspace(next).entries.push({ id:'visual-active', title:'Coding', description:'1. Push to github\\n2. Fix the rounding edge case', startedAt:new Date(Date.now()-1450000).toISOString(), endedAt:null }); }); loadFields(); render();`);
     assert.equal(await evaluate(`document.getElementById('roundedCurrent').textContent`), '0.5h rounded');
-    assert.equal(await evaluate(`document.querySelector('.button-shortcut').getClientRects().length`), 0);
+    assert.equal(await evaluate(`document.querySelector('.button-shortcut')`), null);
     await screenshot(`redesign-tracking-${theme}.png`);
     assert.equal(await evaluate(`document.documentElement.scrollWidth <= window.innerWidth`), true);
     await evaluate(`commit(next => { workspace(next).entries = workspace(next).entries.filter(entry => entry.id !== 'visual-active'); }); loadFields(); render();`);

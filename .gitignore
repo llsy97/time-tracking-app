@@ -4,3 +4,6 @@ __pycache__/
 .artifacts/
 dist/
 time_data.json
+*.keystore
+*.jks
+*.apk
