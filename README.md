@@ -1,6 +1,6 @@
 # moa — Gather your time. Wrap your day.
 
-A mobile-first, offline-ready time tracker with an English interface, local accounts, and a responsive desktop layout. Built with plain HTML, CSS, and JavaScript; local mode has no runtime package dependencies or external font requests. The optional Google integration uses Google's official authentication library.
+A mobile-first, offline-ready time tracker with an English interface, local accounts, and a responsive desktop layout. Built with plain HTML, CSS, and JavaScript; fonts and the Google Cloud authentication SDK are bundled for offline loading. See AUTHENTICATION.md for provider configuration.
 
 The interface follows the supplied **Paper · Ink · Signal** design: warm paper surfaces, orange accents, a day ribbon, stacked task summaries, a block timeline, and a bottom-sheet editor. Design tokens live in `assets/tokens.css`. Bricolage Grotesque, Geist, and Geist Mono are bundled in `assets/fonts/` with their OFL licenses and cached for offline use. Settings supports Light, Dark, and System appearance.
 
@@ -36,26 +36,11 @@ Each time block rounds upward to the next **0.1 hour (6 minutes)** before adding
 
 ## Accounts and storage
 
-Open **Settings → Sign in or create an account**. Usernames are case-insensitive. Passwords require at least eight characters and are stored as salted PBKDF2-SHA-256 hashes (210,000 iterations), never as plaintext. Guest and account workspaces are separate. Switching accounts or signing out saves and stops any running timer. Sessions, labels, drafts, records, and theme survive reopening.
+The default login uses Google Cloud Identity Platform: email/password accounts require email verification, and Google accounts use the browser popup or native Android Credential Manager. Verification resend and password reset are included. See [AUTHENTICATION.md](AUTHENTICATION.md) for configuration and validation limits.
 
-This is a **local account system**, not a hosted authentication or synchronization service. Records are stored in `localStorage`, unencrypted, in the current browser profile. A person with access to browser developer tools or the device can access them. Clearing site storage removes them; exports provide a portable copy. There is no remote password recovery or cross-device sync. Older web-edition records under `timekeeping-app.entries.v1` are imported into the guest workspace without deleting the old key.
+Existing local accounts remain available through the local-account link. Their salted password hashes and workspaces are preserved. Local and online accounts are separate; matching names do not merge records. New online passwords are handled by the authentication SDK and are not stored in the workspace data.
 
-### Google sign-in
-
-The optional Google integration is implemented in `google-auth.js` and `server.js`. It uses the official Google Identity Services button and verifies credentials on the server with `google-auth-library`, including the client ID, signature, expiry, issuer, and a single-use nonce. Requests also require a same-origin request and a matching CSRF challenge cookie/header. Verification follows [Google's server-side token verification guidance](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
-
-To enable it, create a **Web application** OAuth client in your Google Cloud project, register your app's exact origin as an authorized JavaScript origin, and start the Node server with its client ID:
-
-```powershell
-npm install
-$env:GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com'
-$env:APP_ORIGIN = 'http://localhost:4173'
-npm run web
-```
-
-For deployment, set `APP_ORIGIN` to the public HTTPS origin and run the Node server behind an HTTPS reverse proxy. Set `HOST` if the server must listen beyond loopback. Client IDs are public configuration; no client secret is needed for this ID-token flow. Do not put secrets in browser code.
-
-Without configuration, the button displays **Setup needed**. Static-only deployments and the Electron edition support local accounts; Google verification requires the Node backend. Google sign-in identifies a separate local workspace, does not merge with password accounts, and does not sync records. Google credentials are not persisted. Live Google login has not been tested because no real OAuth client ID was provided; route tests exercise the verification contract with test doubles.
+All time records remain in this device's local storage, unencrypted. Online login does not add record synchronization or cloud backup. Clearing app data removes local records. Export reports before clearing data or uninstalling. Switching accounts stops the previous workspace's active timer.
 
 ## Install on Android / deploy
 
@@ -81,7 +66,7 @@ icon-512.png
 
 Open that HTTPS URL in Chrome on Android, then use **Install app** / **Add to Home screen** from Chrome's menu. Settings also shows an install button when the browser supplies an installation prompt. After the first successful load, the service worker caches the app shell for offline use. Account passwords need a secure context (HTTPS or localhost).
 
-This delivers an installable **PWA**, not an Android APK or a Play Store package. A phone's `localhost` is the phone itself, so the Windows localhost URL is only for desktop use. Publish to HTTPS for installation and use on a phone. The local Node server is a development launcher and serves only the public app files.
+The website delivers an installable **PWA**. A separate Android APK can also be built; see [ANDROID.md](ANDROID.md). A phone's `localhost` is the phone itself, so the Windows localhost URL is only for desktop use. Publish to HTTPS for installation and use on a phone. The local Node server is a development launcher and serves only the public app files.
 
 When updating deployed assets, increment `CACHE` in `sw.js`; the new worker activates after older app windows close. User records are independent of the app-shell cache.
 

@@ -40,6 +40,7 @@ function readState() {
   }
 }
 let state = readState();
+if (state.session?.startsWith('cloud:')) document.body.classList.add('auth-loading');
 let selectedDay = T.dayKey();
 let editingId = null;
 let authMode = 'signin';
@@ -123,7 +124,7 @@ function updateLabelSelection() {
 function renderAccount() {
   const account = state.accounts.find(a => a.id === state.session);
   $('profileName').textContent = account?.username || 'Your workspace';
-  $('profileStatus').textContent = account ? 'Local account' : 'Saved on this device';
+  $('profileStatus').textContent = account ? (account.provider === 'cloud' ? 'Verified account' : 'Local account') : 'Saved on this device';
   $('avatar').textContent = (account?.username || 'Y').slice(0, 1).toUpperCase();
   $('settingsAccount').textContent = account ? account.username : 'Local workspace';
   $('settingsAccountHint').textContent = account ? 'Stored in this account on this device' : 'Stored in this browser only';
@@ -360,7 +361,8 @@ function setAuthMode(mode) {
   $('authError').textContent = ''; $('authPassword').value = ''; $('authConfirm').value = '';
   document.querySelectorAll('[data-auth]').forEach(b => b.classList.toggle('selected', b.dataset.auth === mode));
 }
-function openAuth() { $('settingsDialog').close(); setAuthMode('signin'); showDialog('authDialog'); setupGoogleSignIn(); }
+function openAuth() { openCloudAuth(); }
+function openLocalAuth() { $('settingsDialog').close(); setAuthMode('signin'); showDialog('authDialog'); $('googleSignIn').classList.add('hidden'); $('googleInfo').classList.add('hidden'); }
 async function setupGoogleSignIn() {
   if (!['http:', 'https:'].includes(location.protocol)) return;
   const generation = ++googleSetupGeneration;
@@ -419,7 +421,7 @@ async function submitAuth(event) {
   if (mode === 'signup' && password !== $('authConfirm').value) { $('authError').textContent = 'The passwords don’t match.'; return; }
   $('authSubmit').disabled = true;
   try {
-    const account = state.accounts.find(a => a.provider !== 'google' && a.username.toLowerCase() === username.toLowerCase());
+    const account = state.accounts.find(a => !a.provider && a.username.toLowerCase() === username.toLowerCase());
     if (mode === 'signup' && account) throw new Error('That username is already in use on this device.');
     if (mode === 'signin' && !account) throw new Error('Username or password is incorrect.');
     const salt = account?.salt || Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, '0')).join('');
@@ -431,7 +433,7 @@ async function submitAuth(event) {
       const ws = workspace(next); const active = ws.entries.find(e => !e.endedAt);
       if (active) active.endedAt = new Date(Math.max(Date.now(), Date.parse(active.startedAt))).toISOString();
       ws.draft = { title: '', description: '' };
-      if (!account) { if (next.accounts.some(a => a.provider !== 'google' && a.username.toLowerCase() === username.toLowerCase())) throw new Error('Duplicate account'); next.accounts.push(newAccount); next.workspaces[newAccount.id] = blankWorkspace(); }
+      if (!account) { if (next.accounts.some(a => !a.provider && a.username.toLowerCase() === username.toLowerCase())) throw new Error('Duplicate account'); next.accounts.push(newAccount); next.workspaces[newAccount.id] = blankWorkspace(); }
       next.session = newAccount.id;
     });
     if (!ok) return;
@@ -439,7 +441,11 @@ async function submitAuth(event) {
   } catch (error) { $('authError').textContent = error instanceof TypeError ? 'Accounts require HTTPS or localhost. Open moa using run_app.bat.' : error.message; }
   finally { $('authSubmit').disabled = false; }
 }
-function signOut() {
+async function signOut() {
+  if (state.session?.startsWith('cloud:')) {
+    try { await window.MoaAuth.signout(); }
+    catch { toast('Could not sign out. Please try again.'); return; }
+  }
   if (!commit(next => {
     const ws = workspace(next); const active = ws.entries.find(e => !e.endedAt);
     if (active) active.endedAt = new Date(Math.max(Date.now(), Date.parse(active.startedAt))).toISOString();

@@ -1,6 +1,6 @@
 'use strict';
-const CACHE = 'tempo-shell-v8';
-const ASSETS = ['./', './index.html', './styles.css', './script.js', './time-utils.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './favicon-48.png', './assets/logo/moa-mark-ink.svg', './assets/logo/moa-mark-paper.svg'];
+const CACHE = 'tempo-shell-v9';
+const ASSETS = ['./', './index.html', './assets/auth.js', './cloud-auth-ui.js', './styles.css', './script.js', './time-utils.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './favicon-48.png', './assets/logo/moa-mark-ink.svg', './assets/logo/moa-mark-paper.svg'];
 ASSETS.push('./assets/tokens.css', './assets/fonts/BricolageGrotesque-Variable.ttf', './assets/fonts/Geist-Variable.ttf', './assets/fonts/GeistMono-Variable.ttf');
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));

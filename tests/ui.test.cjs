@@ -148,6 +148,7 @@ async function run() {
   assert.equal(await evaluate(`document.body.dataset.theme`), 'dark');
   assert.equal(await evaluate(`workspace().labels.includes('Research')`), true);
   await click('[data-settings]'); await click('[data-theme-choice="light"]'); await click('#accountButton');
+  await click('#cloudLocal'); await waitFor(() => evaluate(`document.getElementById('authDialog').open`), 'legacy account form');
   await click('[data-auth="signup"]'); await fill('authUsername', 'claire_test'); await fill('authPassword', 'test-password-123'); await fill('authConfirm', 'test-password-123'); await submit('authForm');
   await waitFor(() => evaluate(`!document.getElementById('authDialog').open`), 'account signup');
   assert.equal(await evaluate(`workspace().entries.length`), 0);
@@ -157,7 +158,7 @@ async function run() {
   await click('[data-settings]'); await click('#signOutBtn');
   assert.equal(await evaluate(`state.session`), null);
   assert.equal(await evaluate(`workspace().entries.some(e => e.title === 'Private task')`), false);
-  await click('[data-account]'); await fill('authUsername', 'claire_test'); await fill('authPassword', 'wrong-password'); await submit('authForm');
+  await click('[data-account]'); await click('#cloudLocal'); await waitFor(() => evaluate(`document.getElementById('authDialog').open`), 'legacy signin form'); await fill('authUsername', 'claire_test'); await fill('authPassword', 'wrong-password'); await submit('authForm');
   await waitFor(() => evaluate(`!!document.getElementById('authError').textContent`), 'wrong password');
   assert.match(await evaluate(`document.getElementById('authError').textContent`), /incorrect/);
   await fill('authPassword', 'test-password-123'); await submit('authForm'); await waitFor(() => evaluate(`!document.getElementById('authDialog').open`), 'account signin');
@@ -232,6 +233,60 @@ async function run() {
   assert.equal(await evaluate(`document.documentElement.dataset.theme`), 'system');
   await click('#settingsDialog [data-close]');
   console.log('PASS: redesign screens in both themes, local fonts, live rounding preview, touch shortcut visibility, system theme');
+  // Exercise account gating with a deterministic SDK double; no real accounts or emails.
+  await evaluate(`(() => {
+    window.realAuth = window.MoaAuth;
+    window.authCalls = { sent: 0, reset: 0 };
+    window.MoaAuth = {
+      ready: Promise.resolve(), user: null,
+      async signup(email, password, name) { this.user = {uid:'test-cloud', email, displayName:name, emailVerified:false}; authCalls.sent++; return this.user; },
+      async signin() { throw {code:'auth/invalid-credential'}; },
+      async google() { throw {code:'auth/popup-closed-by-user'}; },
+      async resend() { authCalls.sent++; },
+      async refresh() { return this.user; },
+      async reset() { authCalls.reset++; },
+      async signout() { this.user = null; syncCloudUser(null); }
+    };
+  })()`);
+  await click('[data-account]');
+  await screenshot('cloud-signin.png');
+  await fill('cloudEmail', 'test@example.com'); await fill('cloudPassword', 'wrong-password'); await submit('cloudAuthForm');
+  await waitFor(() => evaluate(`!cloudBusy`), 'cloud wrong password');
+  assert.match(await evaluate(`document.getElementById('cloudError').textContent`), /incorrect/);
+  await click('#cloudReset'); await waitFor(() => evaluate(`!cloudBusy`), 'password reset');
+  assert.equal(await evaluate(`authCalls.reset`), 1);
+  await click('#cloudGoogle'); await waitFor(() => evaluate(`!cloudBusy`), 'cancelled Google popup');
+  assert.match(await evaluate(`document.getElementById('cloudError').textContent`), /cancelled/);
+  await click('[data-cloud-mode="signup"]');
+  await fill('cloudName', 'Cloud test'); await fill('cloudEmail', 'test@example.com'); await fill('cloudPassword', 'test-password-123'); await fill('cloudConfirm', 'test-password-123');
+  await submit('cloudAuthForm'); await waitFor(() => evaluate(`!cloudBusy`), 'cloud signup');
+  assert.equal(await evaluate(`state.session`), null);
+  assert.equal(await evaluate(`document.getElementById('cloudVerification').classList.contains('hidden')`), false);
+  assert.equal(await evaluate(`authCalls.sent`), 1);
+  await screenshot('cloud-verification.png');
+  await click('#verificationResend'); await waitFor(() => evaluate(`!cloudBusy`), 'resend cooldown');
+  assert.equal(await evaluate(`authCalls.sent`), 1);
+  await evaluate(`lastVerificationSent = 0`);
+  await click('#verificationResend'); await waitFor(() => evaluate(`!cloudBusy`), 'verification resend');
+  assert.equal(await evaluate(`authCalls.sent`), 2);
+  await click('#verificationCheck'); await waitFor(() => evaluate(`!cloudBusy`), 'still unverified');
+  assert.equal(await evaluate(`state.session`), null);
+  await evaluate(`window.MoaAuth.user.emailVerified = true`);
+  await click('#verificationCheck'); await waitFor(() => evaluate(`!cloudBusy`), 'verified signin');
+  assert.equal(await evaluate(`state.session`), 'cloud:test-cloud');
+  assert.equal(await evaluate(`workspace().entries.length`), 0);
+  assert.equal(await evaluate(`document.getElementById('cloudAuthDialog').open`), false);
+  await click('#toggleTrackingBtn'); await fill('taskTitle', 'Cloud private block');
+  await click('[data-settings]'); await click('#signOutBtn');
+  await waitFor(() => evaluate(`state.session === null`), 'cloud signout');
+  assert.equal(await evaluate(`state.workspaces['cloud:test-cloud'].entries[0].endedAt !== null`), true);
+  assert.equal(await evaluate(`workspace().entries.some(entry => entry.title === 'Cloud private block')`), false);
+  await evaluate(`commit(next => { next.session = 'cloud:test-cloud'; }); window.MoaAuth = window.realAuth;`);
+  await reloadApp();
+  await waitFor(() => evaluate(`!document.body.classList.contains('auth-loading')`), 'untrusted saved cloud session');
+  assert.equal(await evaluate(`state.session`), null);
+  assert.equal(await evaluate(`state.workspaces['cloud:test-cloud'].entries.length`), 1);
+  console.log('PASS: email verification gate, resend cooldown, password reset, cancelled Google flow, cloud isolation and SDK-backed session restore');
   await waitFor(() => evaluate(`navigator.serviceWorker.ready.then(() => true)`), 'service worker');
   await send('Page.reload'); await waitFor(() => evaluate(`document.readyState === 'complete' && !!navigator.serviceWorker.controller`), 'service worker control');
   await send('Network.enable'); await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });

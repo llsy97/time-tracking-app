@@ -88,8 +88,35 @@
     <div class="settings-brand"><span class="brand">moa</span><span>GATHER YOUR TIME. WRAP YOUR DAY.</span></div>
   </dialog>
   <dialog id="authDialog"><form id="authForm"><div class="dialog-heading"><span class="brand">moa</span><button type="button" class="close-button" data-close aria-label="Close">×</button></div><h2 id="authHeading">Welcome back.</h2><p id="authCopy" class="dialog-copy">A clearer day starts here. Sign in to your local workspace.</p><div class="auth-tabs"><button type="button" class="selected" data-auth="signin">Sign in</button><button type="button" data-auth="signup">Create account</button></div><label class="field"><span>Username</span><input id="authUsername" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_.-]+" title="Use letters, numbers, dots, underscores, or hyphens." required></label><label class="field"><span>Password</span><input id="authPassword" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></label><label class="field hidden" id="confirmField"><span>Confirm password</span><input id="authConfirm" type="password" autocomplete="new-password" maxlength="128"></label><p id="authError" class="form-error" role="alert"></p><button class="primary full-width" id="authSubmit" type="submit">Sign in</button><div class="divider"><span>or</span></div><button id="googleSignIn" class="google-button full-width" type="button"><span class="google-g">G</span>Continue with Google<span class="integration-tag">Setup needed</span></button><p id="googleInfo" class="privacy-copy hidden" role="status">Google sign-in is not connected in this local edition. It requires a Google OAuth client and a server that verifies Google credentials. You can use a local account now.</p><p class="privacy-copy">Accounts and records are saved only on this device. A local account is not a cloud backup.</p></form></dialog>
+  <dialog id="cloudAuthDialog">
+    <div class="dialog-heading"><span class="brand">moa</span><button type="button" class="close-button" data-close aria-label="Close">×</button></div>
+    <h2 id="cloudHeading">Welcome back.</h2>
+    <div id="cloudCredentials">
+      <p class="dialog-copy">Sign in with your email or Google account.</p>
+      <div class="auth-tabs"><button type="button" class="selected" data-cloud-mode="signin">Sign in</button><button type="button" data-cloud-mode="signup">Create account</button></div>
+      <form id="cloudAuthForm">
+        <label class="field hidden" id="cloudNameField"><span>Name <small>· optional</small></span><input id="cloudName" autocomplete="nickname" maxlength="80"></label>
+        <label class="field"><span>Email</span><input id="cloudEmail" type="email" autocomplete="email" maxlength="254" required></label>
+        <label class="field"><span>Password</span><input id="cloudPassword" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></label>
+        <label class="field hidden" id="cloudConfirmField"><span>Confirm password</span><input id="cloudConfirm" type="password" autocomplete="new-password" maxlength="128"></label>
+        <button id="cloudSubmit" class="primary full-width" type="submit">Sign in</button>
+      </form>
+      <button id="cloudReset" class="text-button full-width" type="button">Forgot password?</button>
+      <div class="divider"><span>or</span></div>
+      <button id="cloudGoogle" class="google-button full-width" type="button"><span aria-hidden="true" class="google-g">G</span>Continue with Google</button>
+    </div>
+    <section id="cloudVerification" class="hidden" aria-label="Email verification">
+      <h3>Check your inbox</h3><p class="dialog-copy">Open the verification link sent to <strong id="verificationEmail"></strong>, then come back here.</p>
+      <button id="verificationCheck" class="primary full-width" type="button">I've verified my email</button>
+      <button id="verificationResend" class="secondary full-width" type="button">Resend verification email</button>
+      <button id="verificationCancel" class="text-button full-width" type="button">Use a different account</button>
+    </section>
+    <p id="cloudError" class="form-error" role="alert"></p><p id="cloudMessage" class="privacy-copy" role="status"></p>
+    <p class="privacy-copy">Your account is verified online. Time records stay on this device and do not sync between devices.</p>
+    <button id="cloudLocal" type="button" class="text-button full-width">Use an existing local account</button>
+  </dialog>
   <dialog id="confirmDialog"><form id="confirmForm"><div class="dialog-heading"><h2 id="confirmTitle">Delete block?</h2><button type="button" class="close-button" data-close aria-label="Close">×</button></div><p id="confirmCopy" class="dialog-copy"></p><div class="dialog-actions"><button class="secondary" data-close type="button">Cancel</button><button id="confirmAction" class="primary destructive" type="submit">Delete</button></div></form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="time-utils.js"></script><script src="script.js"></script>
+  <script src="assets/auth.js"></script><script src="time-utils.js"></script><script src="script.js"></script><script src="cloud-auth-ui.js"></script>
 </body>
 </html>
