@@ -73,7 +73,7 @@ enum TrackerJournal {
                 || !NSDictionary(dictionary: draft).isEqual(to: journal["draft"] as? [String: Any] ?? [:])
             journal["owner"] = owner; journal["entry"] = entry.map { $0 as Any } ?? NSNull(); journal["draft"] = draft
             journal["enabled"] = true; journal["pending"] = []; journal["revision"] = revision + (changed ? 1 : 0)
-            return journal.merging(["accepted": true]) { _, new in new }
+            return journal.merging(["accepted": true, "changed": changed]) { _, new in new }
         }
     }
     static func milliseconds(_ value: Any?) throws -> Double {

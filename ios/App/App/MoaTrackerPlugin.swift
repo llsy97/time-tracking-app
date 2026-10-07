@@ -43,7 +43,7 @@ public class MoaTrackerPlugin: CAPPlugin, CAPBridgedPlugin {
         do {
             let result = try TrackerJournal.synchronize(call.jsObjectRepresentation)
             if result["accepted"] as? Bool == true {
-                WidgetCenter.shared.reloadTimelines(ofKind: "MoaTimer")
+                if result["changed"] as? Bool == true { WidgetCenter.shared.reloadTimelines(ofKind: "MoaTimer") }
                 DispatchQueue.main.async { [weak self] in
                     (self?.bridge?.viewController as? MoaViewController)?.applyAppearance(dark: call.getString("theme") == "dark")
                 }

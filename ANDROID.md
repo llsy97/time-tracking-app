@@ -11,7 +11,7 @@ npm ci
 npm run android:apk
 ```
 
-The signed, non-debuggable APK is written to `dist/moa-1.4.0.apk`. The script uses Android Studio's JDK and the standard SDK location, or `JAVA_HOME` / `ANDROID_HOME` overrides.
+The signed, non-debuggable APK is written to `dist/moa-1.4.1.apk`. The script uses Android Studio's JDK and the standard SDK location, or `JAVA_HOME` / `ANDROID_HOME` overrides. Core library desugaring supplies the journal's `java.time` APIs on Android 7.x (API 24/25) as well as newer phones.
 
 Signing credentials are generated once under `.artifacts/android-signing/` and never committed. **Back up that entire directory securely.** Future APKs must use the same signing key and application ID to update without uninstalling. Increment Android `versionCode` and `versionName` in `android/app/build.gradle` for future releases, and update the output filename in the build script.
 
