@@ -8,9 +8,6 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.graphics.Color;
-import android.view.View;
-import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.app.NotificationCompat;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -30,18 +27,10 @@ public class MoaTrackerPlugin extends Plugin {
         p.edit().putString("title",call.getString("title","Ready for your next task"))
             .putString("entryId",call.getString("entryId",""))
             .putString("status",call.getString("status","idle"))
+            .putString("theme",call.getString("theme","light"))
             .putLong("elapsedMs",call.getLong("elapsedMs",0L)).putLong("snapshotAt",call.getLong("snapshotAt",System.currentTimeMillis())).apply();
         TrackerWidget.updateAll(getContext());updateNotification();call.resolve();
-        boolean dark = "dark".equals(call.getString("theme", "light"));
-        getActivity().runOnUiThread(() -> {
-            int background = Color.parseColor(dark ? "#1A1C18" : "#F4F1EA");
-            View root = getActivity().findViewById(R.id.moa_screen);
-            if (root != null) root.setBackgroundColor(background);
-            getBridge().getWebView().setBackgroundColor(background);
-            WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getActivity().getWindow(), getActivity().getWindow().getDecorView());
-            controller.setAppearanceLightStatusBars(!dark);
-            controller.setAppearanceLightNavigationBars(!dark);
-        });
+        getActivity().runOnUiThread(() -> ((MainActivity)getActivity()).applyTrackerAppearance());
     }
     @PluginMethod public void getSettings(PluginCall call){JSObject result=new JSObject();result.put("notifications",TrackerWidget.prefs(getContext()).getBoolean("notifications",false));call.resolve(result);}
     @PluginMethod public void pinWidget(PluginCall call){

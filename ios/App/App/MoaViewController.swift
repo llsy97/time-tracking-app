@@ -27,7 +27,7 @@ class MoaViewController: CAPBridgeViewController {
         webView.configuration.userContentController.addUserScript(WKUserScript(source: "document.documentElement.classList.add('native-app');", injectionTime: .atDocumentStart, forMainFrameOnly: true))
     }
     func applyAppearance(dark: Bool) {
-        view.backgroundColor = dark ? UIColor(red: 26/255, green: 28/255, blue: 24/255, alpha: 1) : UIColor(red: 244/255, green: 241/255, blue: 234/255, alpha: 1)
+        view.backgroundColor = dark ? UIColor(red: 14/255, green: 14/255, blue: 12/255, alpha: 1) : UIColor(red: 244/255, green: 241/255, blue: 234/255, alpha: 1)
         webView?.backgroundColor = view.backgroundColor
         setStatusBarStyle(dark ? .lightContent : .darkContent)
     }

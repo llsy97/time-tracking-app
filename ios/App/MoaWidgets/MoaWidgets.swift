@@ -63,6 +63,7 @@ struct MoaTimerWidget: Widget {
             .configurationDisplayName("moa timer")
             .description("See your task and timer. Open moa to start, pause or finish a block.")
             .supportedFamilies([.systemSmall, .systemMedium, .accessoryInline, .accessoryCircular, .accessoryRectangular])
+            .contentMarginsDisabled()
     }
 }
 @main struct MoaWidgets: WidgetBundle {
