@@ -7,13 +7,13 @@ const VIEWS = ['dashboard', 'summary', 'history'];
 function readNavigation() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(NAVIGATION_STORE));
-    if (VIEWS.includes(saved?.view)) return { view: saved.view, settings: saved.settings === true };
+    if (VIEWS.includes(saved?.view)) return { view: saved.view, settings: saved.settings === true, day: saved.day };
   } catch { /* Navigation still works when browser storage is unavailable. */ }
   return { view: 'dashboard', settings: false };
 }
 function saveNavigation() {
   try {
-    sessionStorage.setItem(NAVIGATION_STORE, JSON.stringify({ view: document.body.dataset.view, settings: $('settingsDialog').open }));
+    sessionStorage.setItem(NAVIGATION_STORE, JSON.stringify({ view: document.body.dataset.view, settings: $('settingsDialog').open, day: selectedDay }));
   } catch { /* Saving navigation must not interrupt time tracking. */ }
 }
 const DEFAULT_LABELS = ['Design', 'Meeting', 'Email', 'Coding', 'Planning', 'Docs', 'Review', 'Other'];
@@ -41,7 +41,7 @@ function readState() {
 }
 let state = readState();
 if (state.session?.startsWith('cloud:')) document.body.classList.add('auth-loading');
-let selectedDay = T.dayKey();
+let selectedDay = /^\d{4}-\d{2}-\d{2}$/.test(readNavigation().day || '') ? readNavigation().day : T.dayKey();
 let editingId = null;
 let authMode = 'signin';
 let confirmation = null;
@@ -75,6 +75,7 @@ function commit(change) {
     change(next);
     localStorage.setItem(STORE, JSON.stringify(next));
     state = next;
+    window.syncNativeTracker?.();
     return true;
   } catch { toast('Could not save. Your device storage may be full or unavailable.'); return false; }
 }
@@ -99,7 +100,8 @@ function loadFields() {
   $('taskDescription').value = values.description;
 }
 function availableLabels(ws = workspace()) {
-  return [...DEFAULT_LABELS.filter(label => !(ws.removedDefaultLabels || []).includes(label)), ...ws.labels];
+  const labels = [...DEFAULT_LABELS.filter(label => !(ws.removedDefaultLabels || []).includes(label)), ...ws.labels];
+  return [...new Set([...(ws.labelOrder || []).filter(label => labels.includes(label)), ...labels])];
 }
 function removeLabel(name) {
   if (!commit(next => {
@@ -138,6 +140,8 @@ function updateDateLabel() {
   const summary = document.body.dataset.view === 'summary';
   $('dateLabel').textContent = new Date(`${selectedDay}T12:00:00`).toLocaleDateString('en-US', { ...(summary ? {} : { weekday: 'short' }), month: 'short', day: 'numeric' });
   $('dateLabel').title = readableDay(selectedDay);
+  if ($('settingsDateLabel')) $('settingsDateLabel').textContent = $('dateLabel').textContent;
+  window.renderCalendar?.();
 }
 function timeLabel(value, includeDate = false) {
   return new Date(value).toLocaleTimeString('en-US', { ...(includeDate ? { month: 'short', day: 'numeric' } : {}), hour: 'numeric', minute: '2-digit' });
@@ -152,15 +156,19 @@ function updateNotesIndicator() {
 function renderToday(entries) {
   $('todayHeading').textContent = selectedDay === T.dayKey() ? 'Today so far' : 'This day';
   const ordered = [...entries].sort((a,b) => Number(!b.endedAt) - Number(!a.endedAt) || b.sliceStart - a.sliceStart);
-  $('todayList').innerHTML = ordered.length ? ordered.map(entry => `<div class="today-row${entry.endedAt ? '' : ' live'}"><i style="--color:${color(entry.title)}"></i><span class="today-title">${escapeHtml(entry.title)}</span><span class="today-time">${timeLabel(entry.sliceStart)} – ${entry.endedAt ? timeLabel(entry.sliceEnd) : 'now'}</span><strong>${shownDuration(entry.ms)}</strong></div>`).join('') : '<p class="today-empty">Your time blocks will appear here.</p>';
+  $('todayList').innerHTML = ordered.length ? ordered.map(entry => `<div class="today-row${entry.endedAt ? '' : ' live'}"><i style="--color:${color(entry.title)}"></i><span class="today-title">${escapeHtml(entry.title)}</span><span class="today-time">${timeLabel(entry.sliceStart)} – ${entry.endedAt ? timeLabel(entry.sliceEnd) : T.isPaused(entry) ? 'paused' : 'now'}</span><strong>${shownDuration(entry.ms)}</strong></div>`).join('') : '<p class="today-empty">Your time blocks will appear here.</p>';
 }
 function renderLive() {
   const now = Date.now();
   const active = activeEntry();
-  const elapsed = active ? Math.max(0, now - Date.parse(active.startedAt)) : 0;
+  const elapsed = active ? T.elapsed(active, now) : 0;
   const timerParts = T.timer(elapsed).split(':');
   $('timerDisplay').innerHTML = `${timerParts[0]}<span class="colon">:</span>${timerParts[1]}<span class="colon">:</span><span class="seconds">${timerParts[2]}</span>`;
   document.body.classList.toggle('is-tracking', !!active);
+  document.body.classList.toggle('is-paused', T.isPaused(active));
+  $('pauseTrackingBtn').disabled = !active;
+  $('pauseTrackingBtn').textContent = T.isPaused(active) ? 'Resume' : 'Pause';
+  $('pauseTrackingBtn').setAttribute('aria-label', T.isPaused(active) ? 'Resume tracking' : 'Pause tracking');
   updateNotesIndicator();
   $('workingMeta').innerHTML = active ? `<span class="working-label"><i style="background:${color(active.title)}"></i>${escapeHtml(active.title)}</span><span>since ${timeLabel(active.startedAt)}</span>` : '';
   const rounded = T.roundedTenths(elapsed);
@@ -168,7 +176,7 @@ function renderLive() {
   $('roundingFill').style.width = `${Math.min(100, elapsed / boundary * 100)}%`;
   $('roundedCurrent').textContent = !roundsUp() ? 'Exact time' : active ? `${T.roundedHours(elapsed)}h rounded` : 'Rounds up to 0.1h';
   $('roundingNext').textContent = !roundsUp() ? '' : active ? `${((rounded + 1) / 10).toFixed(1)}h after ${T.timer(rounded * 360000).replace(/^00:/, '')}` : '0.0h';
-  $('trackingStatus').innerHTML = `<i></i>${active ? `Recording · since ${timeLabel(active.startedAt)}` : 'Ready when you are'}`;
+  $('trackingStatus').innerHTML = `<i></i>${active ? (T.isPaused(active) ? 'Paused · take your time' : `Recording · since ${timeLabel(active.startedAt)}`) : 'Ready when you are'}`;
   $('trackingStatus').classList.toggle('active', !!active);
   $('toggleTrackingBtn').classList.toggle('running', !!active);
   $('trackingButtonText').textContent = active ? 'Stop & save block' : 'Start tracking';
@@ -224,7 +232,7 @@ function renderRibbons(entries, now) {
     const date = new Date(value);
     return (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) / 864;
   };
-  const segments = entries.map(entry => `<span class="ribbon-segment" style="left:${fraction(entry.sliceStart)}%;width:${Math.max(0, fraction(entry.sliceEnd) - fraction(entry.sliceStart))}%;background:${color(entry.title)}" title="${escapeHtml(entry.title)} · ${T.duration(entry.ms)}"></span>`).join('');
+  const segments = entries.flatMap(entry => entry.ranges.map(([sliceStart,sliceEnd]) => ({...entry,sliceStart,sliceEnd}))).map(entry => `<span class="ribbon-segment" style="left:${fraction(entry.sliceStart)}%;width:${Math.max(0, fraction(entry.sliceEnd) - fraction(entry.sliceStart))}%;background:${color(entry.title)}" title="${escapeHtml(entry.title)} · ${T.duration(entry.ms)}"></span>`).join('');
   const marker = selectedDay === T.dayKey(now) ? `<span class="ribbon-now" style="left:${fraction(now)}%" title="Now"></span>` : '';
   document.querySelectorAll('[data-ribbon]').forEach(ribbon => { ribbon.innerHTML = segments + marker; });
 }
@@ -233,7 +241,7 @@ function renderEntries() {
   $('entryList').innerHTML = entries.length ? entries.map((entry, index) => {
     const crossesDay = T.dayKey(entry.startedAt) !== T.dayKey(entry.endedAt || Date.now());
     const labelTime = timeLabel(entry.startedAt).split(' ');
-    return `<article class="entry${index === 0 ? ' featured' : ''}" style="--color:${color(entry.title)}"><time class="timeline-time" datetime="${escapeHtml(entry.startedAt)}">${labelTime[0]}<span>${labelTime.slice(1).join(' ')}</span></time><div class="timeline-rail"><i></i></div><div class="entry-card"><div class="entry-heading"><h3 class="entry-name">${escapeHtml(entry.title)}${!entry.endedAt ? '<span class="entry-live">● Live</span>' : ''}</h3><span class="entry-duration" data-duration="${escapeHtml(entry.id)}">${shownDuration(entry.ms)}</span></div><div class="entry-time">${timeLabel(entry.startedAt, crossesDay)} – ${entry.endedAt ? timeLabel(entry.endedAt, crossesDay) : 'Now'} · <span data-actual-duration="${escapeHtml(entry.id)}">${T.duration(entry.ms)}</span>${crossesDay ? '<br>Duration shown for selected day' : ''}</div>${entry.description ? `<p class="entry-description">${escapeHtml(entry.description)}</p>` : ''}<div class="entry-actions"><button class="icon-button" data-edit="${escapeHtml(entry.id)}" aria-label="Edit ${escapeHtml(entry.title)}">${icon('edit')}</button><button class="icon-button" data-delete="${escapeHtml(entry.id)}" aria-label="Delete ${escapeHtml(entry.title)}">${icon('trash')}</button></div></div></article>`;
+    return `<article class="entry${index === 0 ? ' featured' : ''}" style="--color:${color(entry.title)}"><time class="timeline-time" datetime="${escapeHtml(entry.startedAt)}">${labelTime[0]}<span>${labelTime.slice(1).join(' ')}</span></time><div class="timeline-rail"><i></i></div><div class="entry-card"><div class="entry-heading"><h3 class="entry-name">${escapeHtml(entry.title)}${!entry.endedAt ? `<span class="entry-live">${T.isPaused(entry) ? 'Ⅱ Paused' : '● Live'}</span>` : ''}</h3><span class="entry-duration" data-duration="${escapeHtml(entry.id)}">${shownDuration(entry.ms)}</span></div><div class="entry-time">${timeLabel(entry.startedAt, crossesDay)} – ${entry.endedAt ? timeLabel(entry.endedAt, crossesDay) : T.isPaused(entry) ? 'Paused' : 'Now'} · <span data-actual-duration="${escapeHtml(entry.id)}">${T.duration(entry.ms)}</span>${crossesDay ? '<br>Duration shown for selected day' : ''}</div>${entry.description ? `<p class="entry-description">${escapeHtml(entry.description)}</p>` : ''}<div class="entry-actions"><button class="icon-button" data-edit="${escapeHtml(entry.id)}" aria-label="Edit ${escapeHtml(entry.title)}">${icon('edit')}</button><button class="icon-button" data-delete="${escapeHtml(entry.id)}" aria-label="Delete ${escapeHtml(entry.title)}">${icon('trash')}</button></div></div></article>`;
   }).join('') : `<div class="empty-blocks"><div class="empty-clock">${icon('clock')}</div><h3>Your day is a blank canvas.</h3><p>Start the timer or add a block.<br>We’ll keep the details so you don’t have to.</p></div>`;
 }
 function render() {
@@ -241,6 +249,7 @@ function render() {
   updateDateLabel();
   $('dayEyebrow').textContent = `${selectedDay === T.dayKey() ? 'TODAY' : readableDay(selectedDay).toUpperCase()} · ROUNDED TOTAL`;
   renderLabels(); renderAccount(); applyTheme(); renderEntries(); renderLive();
+  window.syncNativeTracker?.();
 }
 function persistDraft() {
   const title = $('taskTitle').value;
@@ -260,7 +269,7 @@ function toggleTracking() {
     const ws = workspace(next);
     const active = ws.entries.find(e => !e.endedAt);
     if (active) {
-      active.endedAt = new Date(Math.max(Date.parse(now), Date.parse(active.startedAt))).toISOString();
+      T.finish(active, Date.parse(now));
       active.title = $('taskTitle').value.trim() || 'Untitled task';
       active.description = $('taskDescription').value.trim();
       stoppedId = active.id;
@@ -273,6 +282,11 @@ function toggleTracking() {
   selectedDay = T.dayKey(); loadFields(); render();
   if (stoppedId) { toast('Time saved. Add the finishing details.'); openEdit(stoppedId); }
   else toast('Timer started. You’ve got this.');
+}
+function togglePauseTracking() {
+  if (!activeEntry()) return;
+  if (!commit(next => T.togglePause(workspace(next).entries.find(e => !e.endedAt)))) return;
+  render(); toast(T.isPaused(activeEntry()) ? 'Timer paused. Break time is not counted.' : 'Timer resumed.');
 }
 function openEdit(id = null) {
   const entry = id ? workspace().entries.find(e => e.id === id) : null;
@@ -296,7 +310,9 @@ function renderEditLabels() {
 function updateEditReadout() {
   const start = Date.parse($('editStart').value);
   const end = $('editEnd').value ? Date.parse($('editEnd').value) : Date.now();
-  $('editReadout').innerHTML = Number.isFinite(start) && Number.isFinite(end) && end >= start ? `<span>${T.duration(end - start)}</span><span class="muted">→</span><span>${roundsUp() ? `${T.roundedHours(end - start)}h billed` : `${T.exactDuration(end - start)} actual`}</span>` : '<span>Choose a valid time range</span>';
+  const original = workspace().entries.find(e => e.id === editingId);
+  const ms = T.elapsed({...original, startedAt:new Date(Number.isFinite(start) ? start : 0).toISOString(), endedAt:Number.isFinite(end) ? new Date(end).toISOString() : null});
+  $('editReadout').innerHTML = Number.isFinite(start) && Number.isFinite(end) && end >= start ? `<span>${T.duration(ms)}</span><span class="muted">→</span><span>${roundsUp() ? `${T.roundedHours(ms)}h billed` : `${T.exactDuration(ms)} actual`}</span>` : '<span>Choose a valid time range</span>';
 }
 function saveEdit(event) {
   event.preventDefault();
@@ -308,12 +324,14 @@ function saveEdit(event) {
   if (start > Date.now() || (end !== null && end > Date.now() + 1000)) { $('editError').textContent = 'Time blocks cannot be in the future.'; return; }
   const existing = workspace().entries.find(e => e.id === editingId);
   if (end === null && (!existing || existing.endedAt)) { $('editError').textContent = 'An end time is required for a saved block.'; return; }
-  const entry = { id: editingId || crypto.randomUUID(), title, description: $('editDescription').value.trim(), startedAt: new Date(start).toISOString(), endedAt: end === null ? null : new Date(end).toISOString() };
+  const entry = { ...(existing || {}), id: editingId || crypto.randomUUID(), title, description: $('editDescription').value.trim(), startedAt: new Date(start).toISOString(), endedAt: end === null ? null : new Date(end).toISOString() };
   const ok = commit(next => {
     const ws = workspace(next);
     if (editingId) {
       const index = ws.entries.findIndex(e => e.id === editingId);
       if (index < 0) throw new Error('Entry no longer exists');
+      entry.pauses = ws.entries[index].pauses || [];
+      if (entry.endedAt) T.finish(entry, Date.parse(entry.endedAt));
       ws.entries[index] = entry;
     } else ws.entries.push(entry);
   });
@@ -332,7 +350,7 @@ function deleteEntry(id) {
 }
 function setDay(day) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(Date.parse(`${day}T12:00:00`))) return;
-  selectedDay = day; render();
+  selectedDay = day; saveNavigation(); render();
 }
 function moveDay(offset) {
   const day = new Date(`${selectedDay}T12:00:00`); day.setDate(day.getDate() + offset); setDay(T.dayKey(day));
@@ -394,7 +412,7 @@ async function setupGoogleSignIn() {
         const id = 'google:' + identity.sub;
         if (!commit(next => {
           const ws = workspace(next); const active = ws.entries.find(entry => !entry.endedAt);
-          if (active) active.endedAt = new Date(Math.max(Date.now(), Date.parse(active.startedAt))).toISOString();
+          if (active) T.finish(active);
           ws.draft = { title: '', description: '' };
           if (!next.accounts.some(account => account.id === id)) { next.accounts.push({ id, username: identity.name, provider: 'google' }); next.workspaces[id] = blankWorkspace(); }
           next.session = id;
@@ -431,7 +449,7 @@ async function submitAuth(event) {
     const newAccount = account || { id: crypto.randomUUID(), username, salt, hash };
     const ok = commit(next => {
       const ws = workspace(next); const active = ws.entries.find(e => !e.endedAt);
-      if (active) active.endedAt = new Date(Math.max(Date.now(), Date.parse(active.startedAt))).toISOString();
+      if (active) T.finish(active);
       ws.draft = { title: '', description: '' };
       if (!account) { if (next.accounts.some(a => !a.provider && a.username.toLowerCase() === username.toLowerCase())) throw new Error('Duplicate account'); next.accounts.push(newAccount); next.workspaces[newAccount.id] = blankWorkspace(); }
       next.session = newAccount.id;
@@ -448,7 +466,7 @@ async function signOut() {
   }
   if (!commit(next => {
     const ws = workspace(next); const active = ws.entries.find(e => !e.endedAt);
-    if (active) active.endedAt = new Date(Math.max(Date.now(), Date.parse(active.startedAt))).toISOString();
+    if (active) T.finish(active);
     ws.draft = { title: '', description: '' }; next.session = null;
   })) return;
   window.google?.accounts?.id?.disableAutoSelect();
@@ -501,6 +519,7 @@ $('notesToggle').addEventListener('click', () => {
 });
 $('taskNotes').addEventListener('toggle', updateNotesIndicator);
 $('toggleTrackingBtn').addEventListener('click', toggleTracking);
+$('pauseTrackingBtn').addEventListener('click', togglePauseTracking);
 ['taskTitle', 'taskDescription'].forEach(id => $(id).addEventListener('input', persistDraft));
 $('taskTitle').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); toggleTracking(); } });
 $('taskTitle').addEventListener('change', () => { renderEntries(); renderLive(); });

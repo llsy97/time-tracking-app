@@ -233,6 +233,83 @@ async function run() {
   assert.equal(await evaluate(`document.documentElement.dataset.theme`), 'system');
   await click('#settingsDialog [data-close]');
   console.log('PASS: redesign screens in both themes, local fonts, live rounding preview, touch shortcut visibility, system theme');
+  const beforeProductivity = await evaluate(`JSON.stringify(state)`);
+  await click('.mobile-nav [data-view="dashboard"]');
+  await fill('taskTitle','Pause test'); await click('#toggleTrackingBtn');
+  await evaluate(`commit(next => {workspace(next).entries.find(e=>!e.endedAt).startedAt=new Date(Date.now()-420000).toISOString();});render();`);
+  await click('#pauseTrackingBtn');
+  const pausedMs=await evaluate(`T.elapsed(activeEntry())`);
+  assert.equal(await evaluate(`T.isPaused(activeEntry())`),true);
+  assert.equal(await evaluate(`T.elapsed(activeEntry(),Date.now()+3600000)`),pausedMs);
+  await reloadApp();
+  assert.equal(await evaluate(`document.getElementById('pauseTrackingBtn').textContent`),'Resume');
+  assert.equal(await evaluate(`T.elapsed(activeEntry())`),pausedMs);
+  await screenshot('timer-paused.png');
+  await click('#pauseTrackingBtn');
+  assert.equal(await evaluate(`T.isPaused(activeEntry())`),false);
+  await click('#toggleTrackingBtn'); await fill('editTitle','Pause edited'); await submit('editForm');
+  assert.equal(await evaluate(`workspace().entries.find(e=>e.title==='Pause edited').pauses.length`),1);
+  assert.equal(await evaluate(`workspace().entries.find(e=>e.title==='Pause edited').pauses[0].endedAt !== null`),true);
+  for(const view of ['dashboard','summary','history']){
+    await click(`.mobile-nav [data-view="${view}"]`); await click('.topbar [data-calendar]');
+    assert.equal(await evaluate(`document.getElementById('calendarDialog').open`),true);
+    assert.equal(await evaluate(`!!document.querySelector('.calendar-day.selected .recorded-dot')`),true);
+    assert.equal(await evaluate(`document.querySelectorAll('.calendar-day').length`),42);
+    if(view==='summary')await screenshot('calendar-light.png');
+    await click('#calendarDialog [data-close]');
+  }
+  await click('.mobile-nav [data-settings]');await click('[data-theme-choice="dark"]');await click('.settings-date [data-calendar]');
+  await screenshot('calendar-dark.png');
+  const chosen=await evaluate(`document.querySelector('.calendar-day:not(.outside):not(.selected)').dataset.calendarDay`);
+  await click(`[data-calendar-day="${chosen}"]`);
+  assert.equal(await evaluate(`selectedDay`),chosen);
+  assert.equal(await evaluate(`document.getElementById('settingsDialog').open`),true);
+  assert.equal(await evaluate(`document.getElementById('settingsDateLabel').textContent`),await evaluate(`document.getElementById('dateLabel').textContent`));
+  await reloadApp();assert.equal(await evaluate(`selectedDay`),chosen);
+  await click('.settings-date [data-calendar]');await click('#calendarToday');
+  await click('[data-theme-choice="light"]');await click('#settingsDialog [data-close]');
+  await click('.mobile-nav [data-view="dashboard"]');
+  await evaluate(`document.getElementById('quickLabels').scrollIntoView({block:'center'});document.getElementById('quickLabels').scrollLeft=0;`);
+  const labelsBefore=await evaluate(`availableLabels()`);
+  const titleBefore=await evaluate(`document.getElementById('taskTitle').value`);
+  const points=await evaluate(`[...document.querySelectorAll('#quickLabels [data-label]')].slice(0,2).map(b=>{const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})`);
+  await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...points[0],id:1}]});await sleep(550);
+  await send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:points[1].x+20,y:points[1].y,id:1}]});
+  await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await sleep(100);
+  assert.equal(await evaluate(`availableLabels()[0]`),labelsBefore[1]);
+  assert.equal(await evaluate(`document.getElementById('taskTitle').value`),titleBefore);
+  await reloadApp();assert.equal(await evaluate(`availableLabels()[0]`),labelsBefore[1]);
+  await evaluate(`document.querySelector('#quickLabels [data-label]').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',altKey:true,bubbles:true}));`);
+  assert.equal(await evaluate(`availableLabels()[0]`),labelsBefore[0]);
+  await evaluate(`localStorage.setItem(STORE,${JSON.stringify(beforeProductivity)});state=readState();setDay(T.dayKey());loadFields();render();`);
+  console.log('PASS: pause/resume persistence, edit preserves breaks, shared calendar and record dots, date persistence, touch and keyboard label ordering');
+  await evaluate(`(async()=>{
+    window.widgetRequest={};window.widgetSnapshot=null;
+    window.Capacitor={isNativePlatform:()=>true,Plugins:{MoaTracker:{
+      async getSettings(){return {notifications:false};},async update(snapshot){window.widgetSnapshot=snapshot;},
+      async pinWidget(){return {supported:true};},async setNotifications(options){return {enabled:options.enabled};},
+      async consumeAction(){const result=window.widgetRequest;window.widgetRequest={};return result;},
+      addListener(name,callback){window.widgetListener=callback;return Promise.resolve({remove(){}});}
+    }}};
+    (0,eval)(await(await fetch('native-tracker.js')).text());
+  })()`);
+  await waitFor(()=>evaluate(`widgetSnapshot?.status === 'idle'`),'widget idle snapshot');
+  await evaluate(`widgetRequest={action:'start'};widgetListener();`);
+  await waitFor(()=>evaluate(`!!activeEntry()`),'widget start');
+  await waitFor(()=>evaluate(`widgetSnapshot?.status === 'running'`),'widget running snapshot');
+  await evaluate(`widgetRequest={action:'pause',entryId:'old-entry'};widgetListener();`);await sleep(100);
+  assert.equal(await evaluate(`T.isPaused(activeEntry())`),false);
+  await evaluate(`widgetRequest={action:'pause',entryId:activeEntry().id};widgetListener();`);
+  await waitFor(()=>evaluate(`T.isPaused(activeEntry())`),'widget pause');
+  await waitFor(()=>evaluate(`widgetSnapshot?.status === 'paused'`),'widget paused snapshot');
+  await evaluate(`widgetRequest={action:'resume',entryId:activeEntry().id};widgetListener();`);
+  await waitFor(()=>evaluate(`!T.isPaused(activeEntry())`),'widget resume');
+  await evaluate(`widgetRequest={action:'stop',entryId:activeEntry().id};widgetListener();`);
+  await waitFor(()=>evaluate(`!activeEntry()`),'widget stop');
+  await click('#editDialog [data-close]');
+  await evaluate(`localStorage.setItem(STORE,${JSON.stringify(beforeProductivity)});`);
+  await reloadApp();
+  console.log('PASS: native widget snapshot and start/pause/resume/stop bridge, stale widget action rejected');
   // Exercise account gating with a deterministic SDK double; no real accounts or emails.
   await evaluate(`(() => {
     window.realAuth = window.MoaAuth;

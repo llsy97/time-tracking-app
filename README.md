@@ -87,3 +87,11 @@ The app has been checked on Windows with Edge at desktop, 390px, and 360px viewp
 ## Android APK
 
 See [ANDROID.md](ANDROID.md) for signed APK builds, installation, storage differences and updates. Run `npm run android:apk` to build.
+
+## Calendar, breaks and label ordering
+
+All tabs share a custom date picker. Its month grid marks days with recorded time using a small dot. Month/year controls and keyboard arrow navigation are supported; the selected date survives a refresh. Days spent entirely paused do not acquire dots.
+
+Pause/Resume keeps one block and stores excluded break intervals. Actual totals, daily summaries, CSV export, the day ribbon and billable rounding all exclude breaks. Rounding applies once to each block's worked time within the selected day. Editing a paused block's title or bounds preserves its break intervals.
+
+Hold a quick label for 450 ms, then drag to reorder. Moving before the hold scrolls the strip. With a keyboard, focus a chip and press Alt+Left/Right. Orders persist per local workspace, including reusable custom labels.

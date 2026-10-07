@@ -16,7 +16,33 @@
     const start = new Date(entry.startedAt).getTime();
     const end = entry.endedAt ? new Date(entry.endedAt).getTime() : now;
     if (!Number.isFinite(start) || !Number.isFinite(end) || end < start || start >= hi || end < lo || (end === lo && start !== end)) return null;
-    return { ...entry, sliceStart: Math.max(start, lo), sliceEnd: Math.min(end, hi), ms: Math.max(0, Math.min(end, hi) - Math.max(start, lo)) };
+    const ranges = workRanges(entry, now).map(([a,b]) => [Math.max(a,lo), Math.min(b,hi)]).filter(([a,b]) => b > a);
+    if (!ranges.length && start !== end && !(start >= lo && start < hi && !entry.endedAt)) return null;
+    return { ...entry, sliceStart: Math.max(start, lo), sliceEnd: Math.min(end, hi), ranges, ms: ranges.reduce((sum,[a,b]) => sum + b-a,0) };
+  }
+  function isPaused(entry) { return !!entry && !entry.endedAt && (entry.pauses || []).some(p => !p.endedAt); }
+  function workRanges(entry, now = Date.now()) {
+    const start = Date.parse(entry.startedAt), end = entry.endedAt ? Date.parse(entry.endedAt) : now;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return [];
+    const pauses = (entry.pauses || []).map(p => [Math.max(start,Date.parse(p.startedAt)), Math.min(end,p.endedAt ? Date.parse(p.endedAt) : end)])
+      .filter(([a,b]) => Number.isFinite(a) && Number.isFinite(b) && b > a).sort((a,b) => a[0]-b[0]);
+    const ranges = []; let cursor = start;
+    for (const [a,b] of pauses) { if (a > cursor) ranges.push([cursor,Math.min(a,end)]); cursor = Math.max(cursor,b); }
+    if (cursor < end) ranges.push([cursor,end]);
+    return ranges.filter(([a,b]) => b > a);
+  }
+  function elapsed(entry, now = Date.now()) { return workRanges(entry,now).reduce((sum,[a,b]) => sum+b-a,0); }
+  function togglePause(entry, now = Date.now()) {
+    if (!entry || entry.endedAt) return;
+    entry.pauses ||= [];
+    const pending = entry.pauses.find(p => !p.endedAt);
+    if (pending) pending.endedAt = new Date(Math.max(now,Date.parse(pending.startedAt))).toISOString();
+    else entry.pauses.push({startedAt:new Date(Math.max(now,Date.parse(entry.startedAt))).toISOString(), endedAt:null});
+  }
+  function finish(entry, now = Date.now()) {
+    const end = Math.max(now,Date.parse(entry.startedAt));
+    (entry.pauses || []).forEach(p => { if (!p.endedAt) p.endedAt = new Date(Math.max(end,Date.parse(p.startedAt))).toISOString(); });
+    entry.endedAt = new Date(end).toISOString();
   }
   function dailyEntries(entries, day, now = Date.now()) {
     return entries.map(e => sliceForDay(e, day, now)).filter(Boolean).sort((a, b) => b.sliceStart - a.sliceStart);
@@ -74,7 +100,7 @@
       return remaining;
     });
   }
-  const api = { dayKey, dayBounds, sliceForDay, dailyEntries, summarize, timer, duration, roundedTenths, roundedHours, exactDuration, localInput, clearDay };
+  const api = { dayKey, dayBounds, sliceForDay, dailyEntries, summarize, timer, duration, roundedTenths, roundedHours, exactDuration, localInput, clearDay, workRanges, elapsed, isPaused, togglePause, finish };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TempoTime = api;
 })(typeof window === 'undefined' ? globalThis : window);

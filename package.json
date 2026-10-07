@@ -31,7 +31,10 @@
       "manifest.webmanifest",
       "icon-maskable-512.png",
       "favicon-48.png",
-      "cloud-auth-ui.js"
+      "cloud-auth-ui.js",
+      "productivity-ui.js",
+      "native-tracker.js",
+      "productivity.css"
     ]
   },
   "devDependencies": {

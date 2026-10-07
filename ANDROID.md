@@ -11,8 +11,16 @@ npm ci
 npm run android:apk
 ```
 
-The signed, non-debuggable APK is written to `dist/moa-1.1.0.apk`. The script uses Android Studio's JDK and the standard SDK location, or `JAVA_HOME` / `ANDROID_HOME` overrides.
+The signed, non-debuggable APK is written to `dist/moa-1.2.0.apk`. The script uses Android Studio's JDK and the standard SDK location, or `JAVA_HOME` / `ANDROID_HOME` overrides.
 
 Signing credentials are generated once under `.artifacts/android-signing/` and never committed. **Back up that entire directory securely.** Future APKs must use the same signing key and application ID to update without uninstalling. Increment Android `versionCode` and `versionName` in `android/app/build.gradle` for future releases, and update the output filename in the build script.
 
 Open the APK on Android and allow installation from the browser/file manager when prompted. This is a directly installable release, not a Play Store publication. Web deployments update the PWA; bundled Android updates require installing a new APK. Uninstalling or clearing app storage removes local records.
+
+## Widgets and lock screen controls
+
+In the APK, open Settings → Widgets & lock screen. “Add home screen widget” opens Android's pin-widget prompt where supported; you can also long-press the home screen and choose Widgets → moa timer. The widget shows the task, elapsed timer, and start/pause/resume/stop controls. Controls open the app (unlocking if necessary) and apply the action to the matching current block; they do not modify WebView records in a background process.
+
+The widget declares both home-screen and keyguard support, but lock-screen placement depends on the phone's Android version and manufacturer. Enable lock screen controls to request notification permission and show an ongoing timer notification. Notification visibility on the lock screen also follows Android privacy settings. The widget and notification use the system chronometer while running, and exclude pauses. Widgets follow the system light/dark appearance.
+
+Only the active task's title, ID, elapsed time, status and snapshot timestamp are mirrored to app-private preferences. Authentication tokens and time-history data are not copied into widget storage. Signing out clears the active snapshot. Android compilation and browser bridge tests pass; native launcher placement and physical-device notification behavior still need device testing.

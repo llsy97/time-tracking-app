@@ -27,7 +27,7 @@ if (!fs.existsSync(key)) run(path.join(java, 'bin', 'keytool.exe'), ['-genkeypai
 const tools = path.join(sdk, 'build-tools', '36.0.0');
 const unsigned = path.join(root, 'android', 'app', 'build', 'outputs', 'apk', 'release', 'app-release-unsigned.apk');
 const aligned = path.join(root, 'dist', 'moa-aligned.apk');
-const output = path.join(root, 'dist', 'moa-1.1.0.apk');
+const output = path.join(root, 'dist', 'moa-1.2.0.apk');
 run(path.join(tools, 'zipalign.exe'), ['-f', '-p', '4', path.relative(root, unsigned), path.relative(root, aligned)]);
 const signer = path.join(tools, 'lib', 'apksigner.jar');
 run(path.join(java, 'bin', 'java.exe'), ['-jar', signer, 'sign', '--ks', path.relative(root, key), '--ks-key-alias', 'moa', '--ks-pass', 'env:MOA_SIGNING_PASSWORD', '--key-pass', 'env:MOA_SIGNING_PASSWORD', '--out', path.relative(root, output), path.relative(root, aligned)]);

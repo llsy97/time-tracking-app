@@ -61,7 +61,7 @@ function syncCloudUser(user) {
   if (!commit(next => {
     if (next.session !== id) {
       const active = workspace(next).entries.find(entry => !entry.endedAt);
-      if (active) active.endedAt = new Date(Math.max(Date.now(), Date.parse(active.startedAt))).toISOString();
+      if (active) T.finish(active);
     }
     if (id) {
       let account = next.accounts.find(account => account.id === id);
