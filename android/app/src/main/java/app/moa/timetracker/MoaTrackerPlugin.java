@@ -36,7 +36,8 @@ public class MoaTrackerPlugin extends Plugin {
     @PluginMethod public void pinWidget(PluginCall call){
         AppWidgetManager manager=AppWidgetManager.getInstance(getContext());
         boolean supported=Build.VERSION.SDK_INT>=26&&manager.isRequestPinAppWidgetSupported();
-        if(supported)manager.requestPinAppWidget(new ComponentName(getContext(),TrackerWidget.class),null,null);
+        Class<?> provider = "2x4".equals(call.getString("size","1x4")) ? TrackerWidgetTall.class : TrackerWidget.class;
+        if(supported)manager.requestPinAppWidget(new ComponentName(getContext(),provider),null,null);
         JSObject result=new JSObject();result.put("supported",supported);call.resolve(result);
     }
     @PluginMethod public void setNotifications(PluginCall call){

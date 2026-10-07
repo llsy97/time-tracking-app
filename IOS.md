@@ -1,6 +1,6 @@
 # iPhone app and widgets
 
-The iOS project includes a Capacitor app, an embedded WidgetKit extension and an App Group that shares only the current timer snapshot. The app and widgets require iOS 16 or later. The website installed through Safari does not include native WidgetKit widgets.
+The iOS project includes a Capacitor app, an embedded WidgetKit extension and an App Group that shares only the current timer snapshot. The app and widgets require iOS 16 or later. **Safari → Add to Home Screen installs the website, not this native iOS app; it cannot provide WidgetKit widgets.** Friends using that version can keep using the tracker, calendar and saved records, but need a signed native app (for example through TestFlight) for iPhone widgets. The Android 1 × 4 / 2 × 4 cell sizes do not map directly to Apple's fixed widget families.
 
 ## Build and install
 

@@ -260,7 +260,7 @@ async function run() {
   }
   await click('.mobile-nav [data-settings]');await click('[data-theme-choice="dark"]');await click('.settings-date [data-calendar]');
   await screenshot('calendar-dark.png');
-  const chosen=await evaluate(`document.querySelector('.calendar-day:not(.outside):not(.selected)').dataset.calendarDay`);
+  const chosen=await evaluate(`document.querySelector('.calendar-day:not(.outside):not(.selected):not(:disabled)').dataset.calendarDay`);
   await click(`[data-calendar-day="${chosen}"]`);
   assert.equal(await evaluate(`selectedDay`),chosen);
   assert.equal(await evaluate(`document.getElementById('settingsDialog').open`),true);
@@ -268,6 +268,30 @@ async function run() {
   await reloadApp();assert.equal(await evaluate(`selectedDay`),chosen);
   await click('.settings-date [data-calendar]');await click('#calendarToday');
   await click('[data-theme-choice="light"]');await click('#settingsDialog [data-close]');
+  for(const view of ['dashboard','summary','history']){
+    await click(`.mobile-nav [data-view="${view}"]`);
+    assert.equal(await evaluate(`document.getElementById('nextDay').disabled`),true);
+    await click('.header-controls [data-calendar]');
+    const tomorrow=await evaluate(`(()=>{const d=new Date();d.setDate(d.getDate()+1);return T.dayKey(d)})()`);
+    assert.equal(await evaluate(`document.querySelector('[data-calendar-day="${tomorrow}"]').disabled`),true);
+    assert.equal(await evaluate(`getComputedStyle(document.activeElement).outlineStyle`),'none');
+    await click(`[data-calendar-day="${tomorrow}"]`);
+    assert.equal(await evaluate(`document.getElementById('calendarDialog').open`),true);
+    assert.equal(await evaluate(`selectedDay===T.dayKey()`),true);
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+    assert.equal(await evaluate(`document.activeElement.dataset.calendarDay===T.dayKey()`),true);
+    assert.equal(await evaluate(`document.getElementById('calendarNext').disabled`),true);
+    assert.equal(await evaluate(`setDay('${tomorrow}')`),false);
+    await click('#calendarDialog [data-close]');
+  }
+  await evaluate(`(()=>{const d=new Date();d.setDate(d.getDate()+1);sessionStorage.setItem(NAVIGATION_STORE,JSON.stringify({view:'history',day:T.dayKey(d)}));})()`);
+  await reloadApp();assert.equal(await evaluate(`selectedDay===T.dayKey()`),true);
+  await click('.mobile-nav [data-settings]');
+  assert.equal(await evaluate(`document.querySelector('[data-day-offset="1"]').disabled`),true);
+  await click('.settings-date [data-calendar]');
+  assert.equal(await evaluate(`getComputedStyle(document.activeElement).outlineStyle`),'none');
+  await screenshot('calendar-unavailable.png');
+  await click('#calendarDialog [data-close]');await click('#settingsDialog [data-close]');
   await click('.mobile-nav [data-view="dashboard"]');
   await evaluate(`document.getElementById('quickLabels').scrollIntoView({block:'center'});document.getElementById('quickLabels').scrollLeft=0;`);
   const labelsBefore=await evaluate(`availableLabels()`);
@@ -287,13 +311,21 @@ async function run() {
     window.widgetRequest={};window.widgetSnapshot=null;
     window.Capacitor={isNativePlatform:()=>true,Plugins:{MoaTracker:{
       async getSettings(){return {notifications:false};},async update(snapshot){window.widgetSnapshot=snapshot;},
-      async pinWidget(){return {supported:true};},async setNotifications(options){return {enabled:options.enabled};},
+      async pinWidget(options){window.requestedWidgetSize=options.size;return {supported:true};},async setNotifications(options){return {enabled:options.enabled};},
       async consumeAction(){const result=window.widgetRequest;window.widgetRequest={};return result;},
       addListener(name,callback){window.widgetListener=callback;return Promise.resolve({remove(){}});}
     }}};
     (0,eval)(await(await fetch('native-tracker.js')).text());
   })()`);
   await waitFor(()=>evaluate(`widgetSnapshot?.status === 'idle'`),'widget idle snapshot');
+  await fill('taskTitle','Coding');
+  await waitFor(()=>evaluate(`widgetSnapshot?.title === 'Coding'`),'widget displays selected idle label');
+  await click('.mobile-nav [data-settings]');await click('#pinTrackerWidget');
+  assert.equal(await evaluate(`requestedWidgetSize`),'1x4');
+  await click('#pinTrackerWidgetTall');assert.equal(await evaluate(`requestedWidgetSize`),'2x4');
+  await click('#settingsDialog [data-close]');
+  await evaluate(`widgetRequest={action:'label'};widgetListener();`);
+  await waitFor(()=>evaluate(`document.activeElement.id === 'taskTitle'`),'widget label opens title field');
   await evaluate(`widgetRequest={action:'start'};widgetListener();`);
   await waitFor(()=>evaluate(`!!activeEntry()`),'widget start');
   await waitFor(()=>evaluate(`widgetSnapshot?.status === 'running'`),'widget running snapshot');
@@ -334,6 +366,22 @@ async function run() {
   await click('#editDialog [data-close]');
   await evaluate(`localStorage.setItem(STORE,${JSON.stringify(beforeProductivity)});`);await reloadApp();
   console.log('PASS: iOS widget instructions and action bridge, theme mirror, native CSS safe-area override');
+  const standaloneScript=await send('Page.addScriptToEvaluateOnNewDocument',{source:"Object.defineProperty(navigator,'standalone',{value:true});"});
+  await reloadApp();
+  assert.equal(await evaluate(`document.documentElement.classList.contains('standalone-app')`),true);
+  await evaluate(`document.documentElement.style.setProperty('--shell-safe-top','28px');document.documentElement.style.setProperty('--shell-safe-bottom','22px');document.body.scrollTop=400;`);
+  assert.equal(await evaluate(`document.body.getBoundingClientRect().top`),28);
+  assert.equal(await evaluate(`document.querySelector('.mobile-nav').getBoundingClientRect().bottom===innerHeight-22`),true);
+  assert.equal(await evaluate(`document.elementFromPoint(100,10).tagName`),'HTML');
+  await click('.mobile-nav [data-settings]');
+  assert.equal(await evaluate(`document.getElementById('settingsDialog').getBoundingClientRect().top`),28);
+  assert.equal(await evaluate(`document.querySelector('.settings-nav').getBoundingClientRect().bottom===innerHeight-22`),true);
+  await click('.settings-date [data-calendar]');
+  assert.equal(await evaluate(`(()=>{const r=document.getElementById('calendarDialog').getBoundingClientRect();return r.top>=28&&r.bottom<=innerHeight-22})()`),true);
+  await screenshot('standalone-safe-screen.png');
+  await click('#calendarDialog [data-close]');await click('#settingsDialog [data-close]');
+  await send('Page.removeScriptToEvaluateOnNewDocument',{identifier:standaloneScript.identifier});await reloadApp();
+  console.log('PASS: installed website scroll, navigation and dialogs stay within simulated device safe areas');
   // Exercise account gating with a deterministic SDK double; no real accounts or emails.
   await evaluate(`(() => {
     window.realAuth = window.MoaAuth;

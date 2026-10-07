@@ -1,6 +1,11 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const T = window.TempoTime;
+// A Safari home-screen install needs its whole scrolling surface, not just
+// the header, to stay below the notch and above the home gesture area.
+if (!window.Capacitor?.isNativePlatform() && (navigator.standalone || window.matchMedia('(display-mode: standalone)').matches)) {
+  document.documentElement.classList.add('standalone-app');
+}
 const STORE = 'tempo.workspace.v2';
 const NAVIGATION_STORE = 'tempo.navigation.v1';
 const VIEWS = ['dashboard', 'summary', 'history'];
@@ -42,6 +47,7 @@ function readState() {
 let state = readState();
 if (state.session?.startsWith('cloud:')) document.body.classList.add('auth-loading');
 let selectedDay = /^\d{4}-\d{2}-\d{2}$/.test(readNavigation().day || '') ? readNavigation().day : T.dayKey();
+if (selectedDay > T.dayKey()) selectedDay = T.dayKey();
 let editingId = null;
 let authMode = 'signin';
 let confirmation = null;
@@ -247,6 +253,8 @@ function renderEntries() {
 }
 function render() {
   $('dayFilter').value = selectedDay;
+  $('nextDay').disabled = selectedDay >= T.dayKey();
+  document.querySelectorAll('[data-day-offset="1"]').forEach(button => { button.disabled = selectedDay >= T.dayKey(); });
   updateDateLabel();
   $('dayEyebrow').textContent = `${selectedDay === T.dayKey() ? 'TODAY' : readableDay(selectedDay).toUpperCase()} · ROUNDED TOTAL`;
   renderLabels(); renderAccount(); applyTheme(); renderEntries(); renderLive();
@@ -350,8 +358,9 @@ function deleteEntry(id) {
   });
 }
 function setDay(day) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(Date.parse(`${day}T12:00:00`))) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(Date.parse(`${day}T12:00:00`)) || day > T.dayKey()) return false;
   selectedDay = day; saveNavigation(); render();
+  return true;
 }
 function moveDay(offset) {
   const day = new Date(`${selectedDay}T12:00:00`); day.setDate(day.getDate() + offset); setDay(T.dayKey(day));

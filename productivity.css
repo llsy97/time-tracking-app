@@ -5,3 +5,11 @@
 
 /* Native shells physically bound the entire web view to the safe screen. */
 html.native-app{--screen-inset-top:0px;--screen-inset-bottom:0px;--screen-inset-left:0px;--screen-inset-right:0px;overscroll-behavior:none}html.native-app body{overscroll-behavior:none;overflow-x:clip}
+
+/* Keep calendar focus neutral, and make future days visibly unavailable. */
+[data-calendar]:focus{outline:0;box-shadow:none}[data-calendar]:focus-visible{outline:0;box-shadow:none;text-decoration:underline;text-underline-offset:5px}#calendarDialog button:focus{outline:0}#calendarDialog button:focus-visible{outline:0;box-shadow:inset 0 0 0 1px var(--line-strong)}.calendar-day:disabled{opacity:.22;cursor:default;box-shadow:none!important;border-color:transparent}.calendar-toolbar .icon-button:disabled{opacity:.22}.widget-size-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* Installed websites retain their own scrolling surface inside device insets. */
+html.standalone-app{--screen-inset-top:0px;--screen-inset-bottom:0px;--screen-inset-left:0px;--screen-inset-right:0px;overscroll-behavior:none}
+html.standalone-app body{position:fixed;inset:var(--shell-safe-top,env(safe-area-inset-top)) var(--shell-safe-right,env(safe-area-inset-right)) var(--shell-safe-bottom,env(safe-area-inset-bottom)) var(--shell-safe-left,env(safe-area-inset-left));overflow:auto;overscroll-behavior:none;transform:translateZ(0)}
+html.standalone-app dialog{inset:var(--shell-safe-top,env(safe-area-inset-top)) var(--shell-safe-right,env(safe-area-inset-right)) var(--shell-safe-bottom,env(safe-area-inset-bottom)) var(--shell-safe-left,env(safe-area-inset-left));max-height:calc(100dvh - var(--shell-safe-top,env(safe-area-inset-top)) - var(--shell-safe-bottom,env(safe-area-inset-bottom)) - 24px)}
+@media(max-width:680px){html.standalone-app #settingsDialog{inset:var(--shell-safe-top,env(safe-area-inset-top)) var(--shell-safe-right,env(safe-area-inset-right)) var(--shell-safe-bottom,env(safe-area-inset-bottom)) var(--shell-safe-left,env(safe-area-inset-left));width:auto;height:auto;max-height:none;transform:translateZ(0)}html.standalone-app .edit-sheet{inset:auto var(--shell-safe-right,env(safe-area-inset-right)) var(--shell-safe-bottom,env(safe-area-inset-bottom)) var(--shell-safe-left,env(safe-area-inset-left));width:auto;margin:0}}

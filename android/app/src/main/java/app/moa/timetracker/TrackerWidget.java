@@ -7,12 +7,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.SystemClock;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.RemoteViews;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
 
 public class TrackerWidget extends AppWidgetProvider {
@@ -37,29 +33,28 @@ public class TrackerWidget extends AppWidgetProvider {
     @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options){updateAll(context);}
     static void updateAll(Context context){
         AppWidgetManager manager=AppWidgetManager.getInstance(context);
-        int[] ids=manager.getAppWidgetIds(new ComponentName(context,TrackerWidget.class));
         SharedPreferences p=prefs(context);
-        String status=p.getString("status","idle"),entry=p.getString("entryId",""),title=p.getString("title","Ready for your next task");
+        String status=p.getString("status","idle"),entry=p.getString("entryId",""),title=p.getString("title","Choose a label");
         boolean running="running".equals(status),active=!"idle".equals(status);
-        for(int id:ids){
-            Bundle options = manager.getAppWidgetOptions(id);
-            boolean compact = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 150) < 220
-                || options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 180) < 240;
-            RemoteViews views=new RemoteViews(context.getPackageName(),compact ? R.layout.tracker_widget_compact : R.layout.tracker_widget);
-            views.setTextViewText(R.id.widget_date,new SimpleDateFormat("EEE, MMM d",Locale.US).format(new Date()).toUpperCase(Locale.US));
+        for(Class<?> provider : new Class<?>[]{TrackerWidget.class,TrackerWidgetTall.class}){
+          for(int id:manager.getAppWidgetIds(new ComponentName(context,provider))){
+            RemoteViews views=new RemoteViews(context.getPackageName(),provider==TrackerWidgetTall.class ? R.layout.tracker_widget_tall : R.layout.tracker_widget);
             views.setTextViewText(R.id.widget_title,title);
-            views.setTextViewText(R.id.widget_status,running?"RECORDING":"paused".equals(status)?"PAUSED · BREAK TIME EXCLUDED":"GATHER YOUR TIME");
-            views.setChronometer(R.id.widget_timer,SystemClock.elapsedRealtime()-elapsed(p),null,running);
-            views.setViewVisibility(R.id.widget_timer,running?View.VISIBLE:View.GONE);
-            views.setViewVisibility(R.id.widget_static_timer,running?View.GONE:View.VISIBLE);
-            views.setTextViewText(R.id.widget_static_timer,duration(elapsed(p)));
-            String next=running?"pause":active?"resume":"start";
-            views.setTextViewText(R.id.widget_toggle,running?"Pause":active?"Resume":"Start tracking");
-            views.setOnClickPendingIntent(R.id.widget_toggle,action(context,next,entry));
-            views.setViewVisibility(R.id.widget_stop,active?View.VISIBLE:View.GONE);
+            views.setContentDescription(R.id.widget_title,"Choose label in moa: "+title);
+            views.setOnClickPendingIntent(R.id.widget_title,action(context,"label",entry));
+            views.setTextViewText(R.id.widget_pause,running||!active?"Pause":"Resume");
+            views.setOnClickPendingIntent(R.id.widget_start,action(context,"start",entry));
+            views.setOnClickPendingIntent(R.id.widget_pause,action(context,running?"pause":"resume",entry));
             views.setOnClickPendingIntent(R.id.widget_stop,action(context,"stop",entry));
+            views.setBoolean(R.id.widget_start,"setEnabled",!active);
+            views.setBoolean(R.id.widget_pause,"setEnabled",active);
+            views.setBoolean(R.id.widget_stop,"setEnabled",active);
+            views.setFloat(R.id.widget_start,"setAlpha",!active?1f:0.25f);
+            views.setFloat(R.id.widget_pause,"setAlpha",active?1f:0.25f);
+            views.setFloat(R.id.widget_stop,"setAlpha",active?1f:0.25f);
             views.setOnClickPendingIntent(R.id.widget_root,action(context,"open",entry));
             manager.updateAppWidget(id,views);
+          }
         }
     }
 }

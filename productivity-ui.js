@@ -4,34 +4,45 @@ const monthNames = Array.from({length:12},(_,i)=>new Date(2026,i,1).toLocaleDate
 function renderCalendar(focusDay) {
   if (!$('calendarDialog').open) return;
   const year = calendarPage.getFullYear(), month = calendarPage.getMonth();
-  $('calendarMonth').innerHTML = monthNames.map((name,i)=>`<option value="${i}"${i===month?' selected':''}>${name}</option>`).join('');
+  const now = new Date(), today = T.dayKey(now);
+  $('calendarMonth').innerHTML = monthNames.map((name,i)=>`<option value="${i}"${i===month?' selected':''}${year===now.getFullYear()&&i>now.getMonth()?' disabled':''}>${name}</option>`).join('');
   const earliest = Math.min(2020,year,...workspace().entries.map(e=>new Date(e.startedAt).getFullYear()).filter(Number.isFinite));
-  const latest = Math.max(new Date().getFullYear()+5,year);
+  const latest = now.getFullYear();
   $('calendarYear').innerHTML = Array.from({length:latest-earliest+1},(_,i)=>`<option${earliest+i===year?' selected':''}>${earliest+i}</option>`).join('');
   const first = new Date(year,month,1,12); first.setDate(1-first.getDay());
-  const today = T.dayKey();
+  $('calendarNext').disabled = year===now.getFullYear() && month>=now.getMonth();
   $('calendarGrid').innerHTML = Array.from({length:42},(_,i)=>{
     const date = new Date(first); date.setDate(first.getDate()+i);
     const key = T.dayKey(date), marked = T.dailyEntries(workspace().entries,key).length>0;
-    const selected = key===selectedDay;
-    return `<button type="button" data-calendar-day="${key}" class="calendar-day${date.getMonth()!==month?' outside':''}${key===today?' today':''}${selected?' selected':''}" aria-label="${date.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}${marked?', time recorded':''}" aria-pressed="${selected}"${key===today?' aria-current="date"':''} tabindex="${key===(focusDay||selectedDay)?0:-1}"><span>${date.getDate()}</span>${marked?'<i class="recorded-dot" aria-hidden="true"></i>':''}</button>`;
+    const selected = key===selectedDay, future = key>today;
+    return `<button type="button" data-calendar-day="${key}" class="calendar-day${date.getMonth()!==month?' outside':''}${key===today?' today':''}${selected?' selected':''}" aria-label="${date.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}${marked?', time recorded':''}${future?', unavailable':''}" aria-pressed="${selected}"${key===today?' aria-current="date"':''}${future?' disabled aria-disabled="true"':''} tabindex="${!future&&key===(focusDay||selectedDay)?0:-1}"><span>${date.getDate()}</span>${marked?'<i class="recorded-dot" aria-hidden="true"></i>':''}</button>`;
   }).join('');
-  if (!$('calendarGrid').querySelector('[tabindex="0"]')) $('calendarGrid').querySelector('.calendar-day:not(.outside)').tabIndex=0;
+  if (!$('calendarGrid').querySelector('[tabindex="0"]')) $('calendarGrid').querySelector('.calendar-day:not(.outside):not(:disabled)').tabIndex=0;
 }
 window.renderCalendar = renderCalendar;
 document.addEventListener('click',event=>{
   const button=event.target.closest('button'); if(!button) return;
+  if(button.disabled) return;
   if(button.hasAttribute('data-calendar')) {
     calendarPage=new Date(`${selectedDay}T12:00:00`); showDialog('calendarDialog'); renderCalendar();
     $('calendarGrid').querySelector('[tabindex="0"]').focus();
   }
   if(button.dataset.dayOffset) moveDay(Number(button.dataset.dayOffset));
-  if(button.dataset.calendarDay) { setDay(button.dataset.calendarDay); $('calendarDialog').close(); }
+  if(button.dataset.calendarDay && setDay(button.dataset.calendarDay)) $('calendarDialog').close();
 });
-function shiftMonth(offset) { calendarPage=new Date(calendarPage.getFullYear(),calendarPage.getMonth()+offset,1,12); renderCalendar(); }
+function shiftMonth(offset) {
+  const next = new Date(calendarPage.getFullYear(),calendarPage.getMonth()+offset,1,12);
+  const now = new Date();
+  if(next > new Date(now.getFullYear(),now.getMonth(),1,12)) return;
+  calendarPage=next; renderCalendar();
+}
 $('calendarPrevious').addEventListener('click',()=>shiftMonth(-1));
 $('calendarNext').addEventListener('click',()=>shiftMonth(1));
-['calendarMonth','calendarYear'].forEach(id=>$(id).addEventListener('change',()=>{calendarPage=new Date(Number($('calendarYear').value),Number($('calendarMonth').value),1,12);renderCalendar();}));
+['calendarMonth','calendarYear'].forEach(id=>$(id).addEventListener('change',()=>{
+  const year=Number($('calendarYear').value), now=new Date();
+  const month=year===now.getFullYear()?Math.min(Number($('calendarMonth').value),now.getMonth()):Number($('calendarMonth').value);
+  calendarPage=new Date(Math.min(year,now.getFullYear()),month,1,12);renderCalendar();
+}));
 $('calendarToday').addEventListener('click',()=>{setDay(T.dayKey());$('calendarDialog').close();});
 $('calendarGrid').addEventListener('keydown',event=>{
   const day=event.target.dataset.calendarDay;
@@ -39,6 +50,7 @@ $('calendarGrid').addEventListener('keydown',event=>{
   const offsets={ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7};
   if(!(event.key in offsets)) return;
   event.preventDefault(); const next=new Date(`${day}T12:00:00`); next.setDate(next.getDate()+offsets[event.key]);
+  if(T.dayKey(next)>T.dayKey()) return;
   calendarPage=next; const key=T.dayKey(next); renderCalendar(key);
   $('calendarGrid').querySelector(`[data-calendar-day="${key}"]`).focus();
 });
