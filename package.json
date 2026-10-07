@@ -9,6 +9,7 @@
     "web": "node server.js --open",
     "test": "node --test --test-isolation=none tests/time-utils.test.cjs tests/google-auth.test.cjs",
     "test:ui": "node tests/ui.test.cjs",
+    "test:android": "node tools/test-android-tracker.cjs",
     "build": "electron-builder --win portable",
     "android:sync": "npm run build:auth && node tools/prepare-android.cjs && cap sync android",
     "android:apk": "npm run android:sync && node tools/build-android.cjs",

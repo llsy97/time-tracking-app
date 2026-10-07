@@ -47,7 +47,7 @@ async function run() {
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1080, deviceScaleFactor: 1, mobile: false });
   await send('Page.navigate', { url: 'http://127.0.0.1:4175' });
   await waitFor(() => evaluate(`document.readyState === 'complete' && !!document.getElementById('quickLabels')?.children.length`), 'app ready');
-  assert.equal(await evaluate(`document.getElementById('blockCount').textContent`), '0');
+  assert.equal(await evaluate(`document.getElementById('blockCount')`), null);
   const reloadApp = async () => {
     await send('Page.reload');
     await waitFor(() => evaluate(`document.readyState === 'complete' && !!document.getElementById('quickLabels')?.children.length`), 'navigation reload');
@@ -258,16 +258,15 @@ async function run() {
     if(view==='summary')await screenshot('calendar-light.png');
     await click('#calendarDialog [data-close]');
   }
-  await click('.mobile-nav [data-settings]');await click('[data-theme-choice="dark"]');await click('.settings-date [data-calendar]');
+  await click('.mobile-nav [data-settings]');await click('[data-theme-choice="dark"]');await click('#settingsDialog [data-close]');await click('.header-controls [data-calendar]');
   await screenshot('calendar-dark.png');
   const chosen=await evaluate(`document.querySelector('.calendar-day:not(.outside):not(.selected):not(:disabled)').dataset.calendarDay`);
   await click(`[data-calendar-day="${chosen}"]`);
   assert.equal(await evaluate(`selectedDay`),chosen);
-  assert.equal(await evaluate(`document.getElementById('settingsDialog').open`),true);
-  assert.equal(await evaluate(`document.getElementById('settingsDateLabel').textContent`),await evaluate(`document.getElementById('dateLabel').textContent`));
+  assert.equal(await evaluate(`document.getElementById('settingsDialog').open`),false);
   await reloadApp();assert.equal(await evaluate(`selectedDay`),chosen);
-  await click('.settings-date [data-calendar]');await click('#calendarToday');
-  await click('[data-theme-choice="light"]');await click('#settingsDialog [data-close]');
+  await click('.header-controls [data-calendar]');await click('#calendarToday');
+  await click('.mobile-nav [data-settings]');await click('[data-theme-choice="light"]');await click('#settingsDialog [data-close]');
   for(const view of ['dashboard','summary','history']){
     await click(`.mobile-nav [data-view="${view}"]`);
     assert.equal(await evaluate(`document.getElementById('nextDay').disabled`),true);
@@ -287,11 +286,13 @@ async function run() {
   await evaluate(`(()=>{const d=new Date();d.setDate(d.getDate()+1);sessionStorage.setItem(NAVIGATION_STORE,JSON.stringify({view:'history',day:T.dayKey(d)}));})()`);
   await reloadApp();assert.equal(await evaluate(`selectedDay===T.dayKey()`),true);
   await click('.mobile-nav [data-settings]');
-  assert.equal(await evaluate(`document.querySelector('[data-day-offset="1"]').disabled`),true);
-  await click('.settings-date [data-calendar]');
-  assert.equal(await evaluate(`getComputedStyle(document.activeElement).outlineStyle`),'none');
+  assert.equal(await evaluate(`document.querySelector('#settingsDialog [data-calendar]')`),null);
+  assert.equal(await evaluate(`document.getElementById('blockCount')`),null);
+  assert.equal(await evaluate(`document.getElementById('listCount')`),null);
+  await click('#settingsDialog [data-close]');
+  await click('.header-controls [data-calendar]');
   await screenshot('calendar-unavailable.png');
-  await click('#calendarDialog [data-close]');await click('#settingsDialog [data-close]');
+  await click('#calendarDialog [data-close]');
   await click('.mobile-nav [data-view="dashboard"]');
   await evaluate(`document.getElementById('quickLabels').scrollIntoView({block:'center'});document.getElementById('quickLabels').scrollLeft=0;`);
   const labelsBefore=await evaluate(`availableLabels()`);
@@ -308,40 +309,69 @@ async function run() {
   await evaluate(`localStorage.setItem(STORE,${JSON.stringify(beforeProductivity)});state=readState();setDay(T.dayKey());loadFields();render();`);
   console.log('PASS: pause/resume persistence, edit preserves breaks, shared calendar and record dots, date persistence, touch and keyboard label ordering');
   await evaluate(`(async()=>{
-    window.widgetRequest={};window.widgetSnapshot=null;
+    window.widgetRequest={};window.widgetSnapshot=null;window.nativeJournal={revision:0,pending:[],entry:null};window.widgetListeners={};
+    window.publishNativeChange=(entry,owner=state.session||'guest',draft)=>{
+      nativeJournal.revision++;nativeJournal.entry=entry.endedAt?null:entry;
+      nativeJournal.pending.push({owner,entry:structuredClone(entry),...(draft?{draft}:{})});
+      widgetListeners.trackerChanged();
+    };
     window.Capacitor={isNativePlatform:()=>true,Plugins:{MoaTracker:{
-      async getSettings(){return {notifications:false};},async update(snapshot){window.widgetSnapshot=snapshot;},
+      async getSettings(){return {notifications:false};},async getSnapshot(){return structuredClone(nativeJournal);},
+      async update(snapshot){
+        if(window.raceEntry){const entry=window.raceEntry;window.raceEntry=null;publishNativeChange(entry);}
+        if(snapshot.revision!==nativeJournal.revision)return {...structuredClone(nativeJournal),accepted:false};
+        window.widgetSnapshot=snapshot;nativeJournal.pending=[];nativeJournal.entry=snapshot.entry;return {...structuredClone(nativeJournal),accepted:true};
+      },
       async pinWidget(options){window.requestedWidgetSize=options.size;return {supported:true};},async setNotifications(options){return {enabled:options.enabled};},
       async consumeAction(){const result=window.widgetRequest;window.widgetRequest={};return result;},
-      addListener(name,callback){window.widgetListener=callback;return Promise.resolve({remove(){}});}
+      addListener(name,callback){window.widgetListeners[name]=callback;return Promise.resolve({remove(){}});}
     }}};
     (0,eval)(await(await fetch('native-tracker.js')).text());
   })()`);
   await waitFor(()=>evaluate(`widgetSnapshot?.status === 'idle'`),'widget idle snapshot');
-  await fill('taskTitle','Coding');
-  await waitFor(()=>evaluate(`widgetSnapshot?.title === 'Coding'`),'widget displays selected idle label');
+  await waitFor(()=>evaluate(`window.nativeTrackerReady === true`),'widget initial migration');
   await click('.mobile-nav [data-settings]');await click('#pinTrackerWidget');
   assert.equal(await evaluate(`requestedWidgetSize`),'1x4');
   await click('#pinTrackerWidgetTall');assert.equal(await evaluate(`requestedWidgetSize`),'2x4');
   await click('#settingsDialog [data-close]');
-  await evaluate(`widgetRequest={action:'label'};widgetListener();`);
-  await waitFor(()=>evaluate(`document.activeElement.id === 'taskTitle'`),'widget label opens title field');
-  await evaluate(`widgetRequest={action:'start'};widgetListener();`);
+  await click('.mobile-nav [data-view="summary"]');
+  await evaluate(`window.nativeEntry={id:'background-block',title:'Untitled task',description:'',startedAt:new Date(Date.now()-420000).toISOString(),endedAt:null};publishNativeChange(nativeEntry);`);
   await waitFor(()=>evaluate(`!!activeEntry()`),'widget start');
   await waitFor(()=>evaluate(`widgetSnapshot?.status === 'running'`),'widget running snapshot');
-  await evaluate(`widgetRequest={action:'pause',entryId:'old-entry'};widgetListener();`);await sleep(100);
-  assert.equal(await evaluate(`T.isPaused(activeEntry())`),false);
-  await evaluate(`widgetRequest={action:'pause',entryId:activeEntry().id};widgetListener();`);
+  assert.equal(await evaluate(`document.body.dataset.view`),'summary');
+  await evaluate(`nativeEntry.pauses=[{startedAt:new Date().toISOString(),endedAt:null}];publishNativeChange(nativeEntry);`);
   await waitFor(()=>evaluate(`T.isPaused(activeEntry())`),'widget pause');
   await waitFor(()=>evaluate(`widgetSnapshot?.status === 'paused'`),'widget paused snapshot');
-  await evaluate(`widgetRequest={action:'resume',entryId:activeEntry().id};widgetListener();`);
+  await evaluate(`nativeEntry.pauses[0].endedAt=new Date().toISOString();publishNativeChange(nativeEntry);`);
   await waitFor(()=>evaluate(`!T.isPaused(activeEntry())`),'widget resume');
-  await evaluate(`widgetRequest={action:'stop',entryId:activeEntry().id};widgetListener();`);
+  await evaluate(`nativeEntry.endedAt=new Date().toISOString();publishNativeChange(nativeEntry,undefined,{title:'',description:''});`);
   await waitFor(()=>evaluate(`!activeEntry()`),'widget stop');
-  await click('#editDialog [data-close]');
+  assert.equal(await evaluate(`document.getElementById('editDialog').open`),false);
+  assert.equal(await evaluate(`document.body.dataset.view`),'summary');
+  assert.equal(await evaluate(`workspace().entries.filter(e=>e.id==='background-block').length`),1);
+  // A widget action arriving during a WebView snapshot must win the compare-and-save race.
+  await evaluate(`window.raceEntry={id:'race-block',title:'Untitled task',description:'',startedAt:new Date().toISOString(),endedAt:null};window.syncNativeTracker(true);`);
+  await waitFor(()=>evaluate(`activeEntry()?.id === 'race-block' && window.nativeTrackerReady === true`),'widget action racing with app snapshot');
+  await evaluate(`nativeEntry=structuredClone(activeEntry());nativeEntry.endedAt=new Date().toISOString();publishNativeChange(nativeEntry);`);
+  await waitFor(()=>evaluate(`!activeEntry() && window.nativeTrackerReady === true`),'racing block saved');
+  // Re-importing an already persisted journal must not undo a later app edit.
+  await evaluate(`commit(next=>{workspace(next).entries.find(e=>e.id==='background-block').title='Retitled in app';});nativeJournal.pending=[{owner:state.session||'guest',entry:{...workspace().entries.find(e=>e.id==='background-block'),title:'Untitled task'}}];window.syncNativeTracker(true);`);
+  await waitFor(()=>evaluate(`nativeJournal.pending.length === 0 && window.nativeTrackerReady === true`),'idempotent journal acknowledgement');
+  assert.equal(await evaluate(`workspace().entries.find(e=>e.id==='background-block').title`),'Retitled in app');
+  await evaluate(`window.otherOwner=state.accounts[0].id;publishNativeChange({id:'other-widget-block',title:'Untitled task',description:'',startedAt:new Date(Date.now()-60000).toISOString(),endedAt:new Date().toISOString()},otherOwner);`);
+  await waitFor(()=>evaluate(`state.workspaces[otherOwner].entries.some(e=>e.id==='other-widget-block') && window.nativeTrackerReady === true`),'widget records restore to original account');
+  assert.equal(await evaluate(`workspace().entries.some(e=>e.id==='other-widget-block')`),false);
+  const coldJournal=await evaluate(`({revision:nativeJournal.revision+1,pending:[{owner:state.session||'guest',entry:{id:'cold-widget-block',title:'Untitled task',description:'',startedAt:new Date(Date.now()-120000).toISOString(),endedAt:new Date().toISOString()}}],entry:null})`);
+  const coldBridge=await send('Page.addScriptToEvaluateOnNewDocument',{source:`window.nativeJournal=${JSON.stringify(coldJournal)};window.Capacitor={isNativePlatform:()=>true,Plugins:{MoaTracker:{async getSettings(){return {notifications:false}},async getSnapshot(){return structuredClone(nativeJournal)},async update(payload){if(payload.revision!==nativeJournal.revision)return {...structuredClone(nativeJournal),accepted:false};nativeJournal.pending=[];return {...structuredClone(nativeJournal),accepted:true}},async consumeAction(){return {}},addListener(){return Promise.resolve({remove(){}})}}}};`});
+  await reloadApp();
+  await waitFor(()=>evaluate(`workspace().entries.some(e=>e.id==='cold-widget-block') && window.nativeTrackerReady === true`),'cold start imports widget records');
+  assert.equal(await evaluate(`workspace().entries.filter(e=>e.id==='cold-widget-block').length`),1);
+  assert.equal(await evaluate(`document.body.dataset.view`),'summary');
+  assert.equal(await evaluate(`!!activeEntry()`),false);
+  await send('Page.removeScriptToEvaluateOnNewDocument',{identifier:coldBridge.identifier});
   await evaluate(`localStorage.setItem(STORE,${JSON.stringify(beforeProductivity)});`);
   await reloadApp();
-  console.log('PASS: native widget snapshot and start/pause/resume/stop bridge, stale widget action rejected');
+  console.log('PASS: background widget start/pause/resume/stop import, view preserved, no edit popup, compare-and-save race and idempotent acknowledgement');
   await evaluate(`(async()=>{
     window.widgetRequest={};window.widgetSnapshot=null;
     window.Capacitor={isNativePlatform:()=>true,getPlatform:()=> 'ios',Plugins:{MoaTracker:{
@@ -376,10 +406,10 @@ async function run() {
   await click('.mobile-nav [data-settings]');
   assert.equal(await evaluate(`document.getElementById('settingsDialog').getBoundingClientRect().top`),28);
   assert.equal(await evaluate(`document.querySelector('.settings-nav').getBoundingClientRect().bottom===innerHeight-22`),true);
-  await click('.settings-date [data-calendar]');
+  await click('#settingsDialog [data-close]');await click('.header-controls [data-calendar]');
   assert.equal(await evaluate(`(()=>{const r=document.getElementById('calendarDialog').getBoundingClientRect();return r.top>=28&&r.bottom<=innerHeight-22})()`),true);
   await screenshot('standalone-safe-screen.png');
-  await click('#calendarDialog [data-close]');await click('#settingsDialog [data-close]');
+  await click('#calendarDialog [data-close]');
   await send('Page.removeScriptToEvaluateOnNewDocument',{identifier:standaloneScript.identifier});await reloadApp();
   console.log('PASS: installed website scroll, navigation and dialogs stay within simulated device safe areas');
   // Exercise account gating with a deterministic SDK double; no real accounts or emails.
@@ -440,7 +470,7 @@ async function run() {
   await send('Page.reload'); await waitFor(() => evaluate(`document.readyState === 'complete' && !!navigator.serviceWorker.controller`), 'service worker control');
   await send('Network.enable'); await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
   await send('Page.reload'); await waitFor(() => evaluate(`document.readyState === 'complete' && !!document.getElementById('quickLabels')?.children.length`), 'offline shell');
-  assert.equal(await evaluate(`document.getElementById('blockCount').textContent`), '5');
+  assert.equal(await evaluate(`workspace().entries.length`), 5);
   console.log('PASS: offline reload preserves app and data');
   assert.deepEqual(errors, []);
   await send('Browser.close');

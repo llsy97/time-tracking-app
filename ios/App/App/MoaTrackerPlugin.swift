@@ -24,6 +24,7 @@ public class MoaTrackerPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "MoaTracker"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "update", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getSnapshot", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getSettings", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "pinWidget", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "consumeAction", returnType: CAPPluginReturnPromise)
@@ -39,17 +40,20 @@ public class MoaTrackerPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     deinit { if let observer = observer { NotificationCenter.default.removeObserver(observer) } }
     @objc func update(_ call: CAPPluginCall) {
-        guard let shared = TrackerSnapshot.defaults else { call.reject("Enable the moa App Group on both app and widget targets."); return }
-        let snapshot = TrackerSnapshot(title: call.getString("title") ?? TrackerSnapshot.empty.title,
-            entryId: call.getString("entryId") ?? "", status: call.getString("status") ?? "idle",
-            elapsedMs: call.getDouble("elapsedMs") ?? 0, snapshotAt: call.getDouble("snapshotAt") ?? Date().timeIntervalSince1970 * 1000)
-        guard let data = try? JSONEncoder().encode(snapshot) else { call.reject("Could not save widget state."); return }
-        shared.set(data, forKey: TrackerSnapshot.storageKey)
-        WidgetCenter.shared.reloadTimelines(ofKind: "MoaTimer")
-        DispatchQueue.main.async { [weak self] in
-            (self?.bridge?.viewController as? MoaViewController)?.applyAppearance(dark: call.getString("theme") == "dark")
-        }
-        call.resolve()
+        do {
+            let result = try TrackerJournal.synchronize(call.jsObjectRepresentation)
+            if result["accepted"] as? Bool == true {
+                WidgetCenter.shared.reloadTimelines(ofKind: "MoaTimer")
+                DispatchQueue.main.async { [weak self] in
+                    (self?.bridge?.viewController as? MoaViewController)?.applyAppearance(dark: call.getString("theme") == "dark")
+                }
+            }
+            call.resolve(result)
+        } catch { call.reject("Could not save widget records. Check App Group provisioning.", nil, error) }
+    }
+    @objc func getSnapshot(_ call: CAPPluginCall) {
+        do { call.resolve(try TrackerJournal.read()) }
+        catch { call.reject("Could not read widget records. Check App Group provisioning.", nil, error) }
     }
     @objc func getSettings(_ call: CAPPluginCall) { call.resolve(["notifications": false, "lockScreenWidgets": true]) }
     @objc func pinWidget(_ call: CAPPluginCall) { call.resolve(["supported": false]) }

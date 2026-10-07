@@ -70,6 +70,7 @@ function toast(message) {
   toastTimeout = setTimeout(() => $('toast').classList.remove('visible'), 4200);
 }
 function commit(change) {
+  if (window.nativeTrackerReady === false) { toast('Syncing widget records. Please try again in a moment.'); return false; }
   if (storageBroken) { toast('Storage could not be read. Export existing data before resetting browser storage.'); return false; }
   try {
     // Read immediately before writing so another open window cannot silently overwrite newer blocks.
@@ -147,7 +148,6 @@ function updateDateLabel() {
   const summary = document.body.dataset.view === 'summary';
   $('dateLabel').textContent = new Date(`${selectedDay}T12:00:00`).toLocaleDateString('en-US', { ...(summary ? {} : { weekday: 'short' }), month: 'short', day: 'numeric' });
   $('dateLabel').title = readableDay(selectedDay);
-  if ($('settingsDateLabel')) $('settingsDateLabel').textContent = $('dateLabel').textContent;
   window.renderCalendar?.();
 }
 function timeLabel(value, includeDate = false) {
@@ -197,10 +197,8 @@ function renderLive() {
   $('totalTracked').title = T.timer(total);
   $('actualTotal').textContent = T.timer(total);
   $('summaryActual').textContent = T.timer(total);
-  $('trackerFootnote').textContent = active ? `Day total ${shownDuration(total, totalTenths)} · ${entries.length} blocks` : 'Saved automatically, even if you close the app.';
+  $('trackerFootnote').textContent = active ? `Day total ${shownDuration(total, totalTenths)}` : 'Saved automatically, even if you close the app.';
   $('totalCaption').textContent = entries.some(e => !e.endedAt && selectedDay === T.dayKey()) ? 'Tracking live · keep your focus' : entries.length ? `${T.timer(total)} actual${roundsUp() ? ' · each block rounded up' : ''}` : 'A fresh start for your day';
-  $('blockCount').textContent = entries.length;
-  $('listCount').textContent = entries.length;
   $('blockCaption').textContent = entries.length ? `${groups.length} unique task${groups.length === 1 ? '' : 's'} throughout the day` : 'One task, one moment at a time';
   $('topTask').textContent = groups[0]?.title || 'A clean slate';
   $('topTaskCaption').textContent = groups.length ? `${shownDuration(groups[0].ms, groups[0].tenths)} · task total` : 'Your focus will show up here';

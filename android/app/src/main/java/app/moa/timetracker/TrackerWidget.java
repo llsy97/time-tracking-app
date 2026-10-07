@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.RemoteViews;
 import java.util.Locale;
+import org.json.JSONObject;
 
 public class TrackerWidget extends AppWidgetProvider {
     static final String PREFS="moa_tracker_widget";
@@ -17,11 +18,17 @@ public class TrackerWidget extends AppWidgetProvider {
     static PendingIntent action(Context context,String action,String entryId){
         String key=prefs(context).getString("actionKey",null);
         if(key==null){key=java.util.UUID.randomUUID().toString();prefs(context).edit().putString("actionKey",key).apply();}
-        Intent intent=new Intent(context,MainActivity.class).setAction("app.moa.timetracker."+action)
+        Intent intent=new Intent(context,"open".equals(action) ? MainActivity.class : TrackerActionReceiver.class).setAction("app.moa.timetracker."+action)
             .putExtra("moaAction",action).putExtra("moaEntryId",entryId)
             .putExtra("moaActionKey",key)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        return PendingIntent.getActivity(context,action.hashCode(),intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        if("open".equals(action))return PendingIntent.getActivity(context,action.hashCode(),intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        try {
+            JSONObject snapshot=TrackerStore.snapshot(context);
+            intent.putExtra("moaOwner",snapshot.optString("owner","guest")).putExtra("moaRevision",snapshot.optLong("revision",-1));
+        } catch(Exception error){intent.putExtra("moaRevision",-1L);}
+        intent.setFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+        return PendingIntent.getBroadcast(context,action.hashCode(),intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
     static long elapsed(SharedPreferences prefs){
         long duration=prefs.getLong("elapsedMs",0);
@@ -34,25 +41,23 @@ public class TrackerWidget extends AppWidgetProvider {
     static void updateAll(Context context){
         AppWidgetManager manager=AppWidgetManager.getInstance(context);
         SharedPreferences p=prefs(context);
-        String status=p.getString("status","idle"),entry=p.getString("entryId",""),title=p.getString("title","Choose a label");
+        String status=p.getString("status","idle"),entry=p.getString("entryId","");
         boolean running="running".equals(status),active=!"idle".equals(status);
+        boolean ready=false;
+        try {ready=TrackerStore.snapshot(context).optBoolean("enabled");} catch(Exception ignored){}
         for(Class<?> provider : new Class<?>[]{TrackerWidget.class,TrackerWidgetTall.class}){
           for(int id:manager.getAppWidgetIds(new ComponentName(context,provider))){
             RemoteViews views=new RemoteViews(context.getPackageName(),provider==TrackerWidgetTall.class ? R.layout.tracker_widget_tall : R.layout.tracker_widget);
-            views.setTextViewText(R.id.widget_title,title);
-            views.setContentDescription(R.id.widget_title,"Choose label in moa: "+title);
-            views.setOnClickPendingIntent(R.id.widget_title,action(context,"label",entry));
             views.setTextViewText(R.id.widget_pause,running||!active?"Pause":"Resume");
             views.setOnClickPendingIntent(R.id.widget_start,action(context,"start",entry));
             views.setOnClickPendingIntent(R.id.widget_pause,action(context,running?"pause":"resume",entry));
             views.setOnClickPendingIntent(R.id.widget_stop,action(context,"stop",entry));
-            views.setBoolean(R.id.widget_start,"setEnabled",!active);
-            views.setBoolean(R.id.widget_pause,"setEnabled",active);
-            views.setBoolean(R.id.widget_stop,"setEnabled",active);
-            views.setFloat(R.id.widget_start,"setAlpha",!active?1f:0.25f);
-            views.setFloat(R.id.widget_pause,"setAlpha",active?1f:0.25f);
-            views.setFloat(R.id.widget_stop,"setAlpha",active?1f:0.25f);
-            views.setOnClickPendingIntent(R.id.widget_root,action(context,"open",entry));
+            views.setBoolean(R.id.widget_start,"setEnabled",ready&&!active);
+            views.setBoolean(R.id.widget_pause,"setEnabled",ready&&active);
+            views.setBoolean(R.id.widget_stop,"setEnabled",ready&&active);
+            views.setFloat(R.id.widget_start,"setAlpha",ready&&!active?1f:0.25f);
+            views.setFloat(R.id.widget_pause,"setAlpha",ready&&active?1f:0.25f);
+            views.setFloat(R.id.widget_stop,"setAlpha",ready&&active?1f:0.25f);
             manager.updateAppWidget(id,views);
           }
         }
