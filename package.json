@@ -12,7 +12,8 @@
     "build": "electron-builder --win portable",
     "android:sync": "npm run build:auth && node tools/prepare-android.cjs && cap sync android",
     "android:apk": "npm run android:sync && node tools/build-android.cjs",
-    "build:auth": "node tools/build-auth.cjs"
+    "build:auth": "node tools/build-auth.cjs",
+    "ios:sync": "npm run build:auth && node tools/prepare-android.cjs && node tools/prepare-ios.cjs && cap sync ios"
   },
   "build": {
     "appId": "app.tempo.local",
@@ -47,6 +48,7 @@
     "@capacitor/android": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/ios": "^8.5.2",
     "@capacitor/share": "^8.0.3",
     "firebase": "^12.19.0",
     "google-auth-library": "^11.1.0"

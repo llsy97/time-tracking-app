@@ -1,0 +1,42 @@
+name: iOS app and widgets
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', 'tools/**', 'package*.json', 'capacitor.config.json', '*.js', '*.css', 'index.html', 'auth-config.json', '.github/workflows/ios-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select installed Xcode 26
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs'), {execFileSync} = require('node:child_process');
+          const versions = fs.readdirSync('/Applications').filter(name => /^Xcode_26[._]/.test(name)).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+          if (!versions.length) throw new Error('This runner needs Xcode 26 or newer for Capacitor 8.');
+          execFileSync('sudo', ['xcode-select','-s','/Applications/'+versions.at(-1)+'/Contents/Developer']);
+          NODE
+          xcodebuild -version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Compile app and embedded WidgetKit extension
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath dist/ios-simulator CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ios-build.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-build-log
+          path: ios-build.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moa-ios-simulator
+          path: dist/ios-simulator/Build/Products/Debug-iphonesimulator/App.app

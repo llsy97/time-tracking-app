@@ -13,4 +13,4 @@ for (const directory of ['fonts', 'logo']) {
 }
 fs.copyFileSync(path.join(root, 'assets', 'auth.js'), path.join(target, 'assets', 'auth.js'));
 fs.copyFileSync(path.join(root, 'assets', 'tokens.css'), path.join(target, 'assets', 'tokens.css'));
-console.log('Android web assets prepared.');
+console.log('Mobile web assets prepared.');

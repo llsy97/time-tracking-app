@@ -3,6 +3,6 @@
   "appName": "moa",
   "webDir": "dist/mobile",
   "plugins": {
-    "SystemBars": { "insetsHandling": "native" }
+    "SystemBars": { "insetsHandling": "disable" }
   }
 }

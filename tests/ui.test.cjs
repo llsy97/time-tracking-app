@@ -310,6 +310,30 @@ async function run() {
   await evaluate(`localStorage.setItem(STORE,${JSON.stringify(beforeProductivity)});`);
   await reloadApp();
   console.log('PASS: native widget snapshot and start/pause/resume/stop bridge, stale widget action rejected');
+  await evaluate(`(async()=>{
+    window.widgetRequest={};window.widgetSnapshot=null;
+    window.Capacitor={isNativePlatform:()=>true,getPlatform:()=> 'ios',Plugins:{MoaTracker:{
+      async update(snapshot){window.widgetSnapshot=snapshot;},
+      async consumeAction(){const result=window.widgetRequest;window.widgetRequest={};return result;},
+      addListener(name,callback){window.widgetListener=callback;return Promise.resolve({remove(){}});}
+    }}};
+    (0,eval)(await(await fetch('native-tracker.js')).text());
+  })()`);
+  await waitFor(()=>evaluate(`widgetSnapshot?.theme === document.body.dataset.theme`),'iOS appearance snapshot');
+  assert.equal(await evaluate(`document.querySelector('#lockTrackerToggle') === null`),true);
+  assert.equal(await evaluate(`document.documentElement.classList.contains('native-app')`),true);
+  assert.equal(await evaluate(`getComputedStyle(document.documentElement).getPropertyValue('--screen-inset-top').trim()`),'0px');
+  await click('.mobile-nav [data-settings]');await click('#pinTrackerWidget');
+  assert.match(await evaluate(`document.getElementById('toast').textContent`),/Home or Lock Screen/);
+  assert.match(await evaluate(`document.querySelector('.widget-settings').textContent`),/Customize.*Add Widgets/);
+  await click('#settingsDialog [data-close]');
+  await evaluate(`widgetRequest={action:'start'};widgetListener();`);
+  await waitFor(()=>evaluate(`!!activeEntry()`),'iOS widget opens and starts tracker');
+  await evaluate(`widgetRequest={action:'stop',entryId:activeEntry().id};widgetListener();`);
+  await waitFor(()=>evaluate(`!activeEntry()`),'iOS widget stop');
+  await click('#editDialog [data-close]');
+  await evaluate(`localStorage.setItem(STORE,${JSON.stringify(beforeProductivity)});`);await reloadApp();
+  console.log('PASS: iOS widget instructions and action bridge, theme mirror, native CSS safe-area override');
   // Exercise account gating with a deterministic SDK double; no real accounts or emails.
   await evaluate(`(() => {
     window.realAuth = window.MoaAuth;

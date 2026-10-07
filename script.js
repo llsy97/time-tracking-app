@@ -91,6 +91,7 @@ function applyTheme() {
   document.body.dataset.theme = theme === 'system' ? (systemTheme.matches ? 'dark' : 'light') : theme;
   document.querySelectorAll('[data-theme-choice]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.themeChoice === theme)));
   document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  window.syncNativeTracker?.();
 }
 systemTheme.addEventListener('change', () => { if (state.theme === 'system') applyTheme(); });
 function loadFields() {

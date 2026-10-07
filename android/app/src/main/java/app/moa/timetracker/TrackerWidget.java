@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
+import android.os.Bundle;
 import android.view.View;
 import android.widget.RemoteViews;
 import java.text.SimpleDateFormat;
@@ -33,6 +34,7 @@ public class TrackerWidget extends AppWidgetProvider {
     }
     static String duration(long ms){long seconds=ms/1000;return String.format(Locale.US,"%02d:%02d:%02d",seconds/3600,(seconds/60)%60,seconds%60);}
     @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){updateAll(context);}
+    @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options){updateAll(context);}
     static void updateAll(Context context){
         AppWidgetManager manager=AppWidgetManager.getInstance(context);
         int[] ids=manager.getAppWidgetIds(new ComponentName(context,TrackerWidget.class));
@@ -40,7 +42,10 @@ public class TrackerWidget extends AppWidgetProvider {
         String status=p.getString("status","idle"),entry=p.getString("entryId",""),title=p.getString("title","Ready for your next task");
         boolean running="running".equals(status),active=!"idle".equals(status);
         for(int id:ids){
-            RemoteViews views=new RemoteViews(context.getPackageName(),R.layout.tracker_widget);
+            Bundle options = manager.getAppWidgetOptions(id);
+            boolean compact = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 150) < 220
+                || options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 180) < 240;
+            RemoteViews views=new RemoteViews(context.getPackageName(),compact ? R.layout.tracker_widget_compact : R.layout.tracker_widget);
             views.setTextViewText(R.id.widget_date,new SimpleDateFormat("EEE, MMM d",Locale.US).format(new Date()).toUpperCase(Locale.US));
             views.setTextViewText(R.id.widget_title,title);
             views.setTextViewText(R.id.widget_status,running?"RECORDING":"paused".equals(status)?"PAUSED · BREAK TIME EXCLUDED":"GATHER YOUR TIME");

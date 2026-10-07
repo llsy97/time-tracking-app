@@ -20,7 +20,7 @@ window.MoaAuth = {
   async signin(email, password) { return (await signInWithEmailAndPassword(auth, email, password)).user; },
   async google() {
     if (native()) {
-      if (!config.googleWebClientId) throw new Error('Google sign-in for Android is awaiting configuration. Email sign-in is available.');
+      if (!config.googleWebClientId) throw new Error('Google sign-in is awaiting configuration. Email sign-in is available.');
       const result = await window.Capacitor.Plugins.MoaGoogle.signIn({ clientId: config.googleWebClientId });
       return (await signInWithCredential(auth, GoogleAuthProvider.credential(result.idToken))).user;
     }

@@ -2,6 +2,8 @@
 
 A mobile-first, offline-ready time tracker with an English interface, local accounts, and a responsive desktop layout. Built with plain HTML, CSS, and JavaScript; fonts and the Google Cloud authentication SDK are bundled for offline loading. See AUTHENTICATION.md for provider configuration.
 
+See [ANDROID.md](ANDROID.md) for the signed Android APK and screen insets, [IOS.md](IOS.md) for the iPhone app and WidgetKit extension, and [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md) for authentication email sender configuration.
+
 The interface follows the supplied **Paper · Ink · Signal** design: warm paper surfaces, orange accents, a day ribbon, stacked task summaries, a block timeline, and a bottom-sheet editor. Design tokens live in `assets/tokens.css`. Bricolage Grotesque, Geist, and Geist Mono are bundled in `assets/fonts/` with their OFL licenses and cached for offline use. Settings supports Light, Dark, and System appearance.
 
 The handoff's example data is not imported. Existing timestamps, local accounts, custom/deleted labels, and per-block rounding remain unchanged. Notes can be expanded using the notes button; starting or stopping keeps the same layout. Label remove buttons and full date/time editing are retained; Settings exports the selected day, matching the app's existing export behavior.

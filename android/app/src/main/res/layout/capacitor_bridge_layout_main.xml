@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/moa_screen" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:clipToPadding="true"
+    android:clipChildren="true" android:background="#F4F1EA">
+    <com.getcapacitor.CapacitorWebView android:id="@+id/webview"
+        android:layout_width="match_parent" android:layout_height="match_parent" />
+</FrameLayout>
