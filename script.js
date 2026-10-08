@@ -145,8 +145,7 @@ function readableDay(day) {
   return new Date(`${day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 function updateDateLabel() {
-  const summary = document.body.dataset.view === 'summary';
-  $('dateLabel').textContent = new Date(`${selectedDay}T12:00:00`).toLocaleDateString('en-US', { ...(summary ? {} : { weekday: 'short' }), month: 'short', day: 'numeric' });
+  $('dateLabel').textContent = new Date(`${selectedDay}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   $('dateLabel').title = readableDay(selectedDay);
   window.renderCalendar?.();
 }
