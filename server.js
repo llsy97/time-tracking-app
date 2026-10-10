@@ -17,7 +17,7 @@ const googleRoutes = require('./google-auth.js').createGoogleRoutes({
   origins: process.env.APP_ORIGIN ? [process.env.APP_ORIGIN] : [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`],
   verifyToken,
 });
-const PUBLIC_FILES = new Set(['assets/auth.js', 'cloud-auth-ui.js', 'productivity-ui.js', 'native-tracker.js', 'productivity.css', 'index.html', 'styles.css', 'script.js', 'time-utils.js', 'manifest.webmanifest', 'sw.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'favicon-48.png', 'assets/logo/moa-mark-ink.svg', 'assets/logo/moa-mark-paper.svg']);
+const PUBLIC_FILES = new Set(['workspace-backup.js', 'workspace-backup-ui.js', 'assets/auth.js', 'cloud-auth-ui.js', 'productivity-ui.js', 'native-tracker.js', 'productivity.css', 'index.html', 'styles.css', 'script.js', 'time-utils.js', 'manifest.webmanifest', 'sw.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'favicon-48.png', 'assets/logo/moa-mark-ink.svg', 'assets/logo/moa-mark-paper.svg']);
 ['assets/tokens.css', 'assets/fonts/BricolageGrotesque-Variable.ttf', 'assets/fonts/Geist-Variable.ttf', 'assets/fonts/GeistMono-Variable.ttf'].forEach(file => PUBLIC_FILES.add(file));
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 TYPES['.ttf'] = 'font/ttf';

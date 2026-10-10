@@ -344,8 +344,9 @@ function saveEdit(event) {
   if (!ok) return;
   $('editDialog').close(); loadFields(); render(); toast('Block saved. Your summary is up to date.');
 }
-function confirmAction(title, copy, action, button = 'Delete') {
+function confirmAction(title, copy, action, button = 'Delete', destructive = true) {
   $('confirmTitle').textContent = title; $('confirmCopy').textContent = copy;
+  $('confirmAction').classList.toggle('destructive', destructive);
   $('confirmAction').textContent = button; confirmation = action; showDialog('confirmDialog');
 }
 function deleteEntry(id) {
@@ -602,4 +603,15 @@ setInterval(() => {
   if (today !== lastDay) { if (selectedDay === lastDay) selectedDay = today; lastDay = today; render(); }
   else if (activeEntry()) renderLive();
 }, 1000);
-if (!window.Capacitor?.isNativePlatform() && 'serviceWorker' in navigator && ['http:', 'https:'].includes(location.protocol)) navigator.serviceWorker.register('./sw.js').catch(() => {});
+if (!window.Capacitor?.isNativePlatform() && 'serviceWorker' in navigator && ['http:', 'https:'].includes(location.protocol)) {
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(registration => {
+    let lastCheck = 0;
+    const checkForUpdate = () => {
+      if (!navigator.onLine || document.hidden || Date.now() - lastCheck < 60000) return;
+      lastCheck = Date.now(); registration.update().catch(() => {});
+    };
+    checkForUpdate();
+    window.addEventListener('pageshow', checkForUpdate);
+    document.addEventListener('visibilitychange', checkForUpdate);
+  }).catch(() => {});
+}

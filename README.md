@@ -46,9 +46,9 @@ All time records remain in this device's local storage, unencrypted. Online logi
 
 ## Install on Android / deploy
 
-Live app: **https://llsy97.github.io/time-tracking-app/**
+Primary hosting: **https://moa-time-tracker.eversince.chatgpt.site**. See [DEPLOYMENT.md](DEPLOYMENT.md) for deployment and moving existing records.
 
-GitHub Pages publishes the `main` branch from the repository root. `.nojekyll` keeps the app's static files unchanged. Push updates to `main` to redeploy. This hosted edition supports local accounts; Google sign-in requires the separate Node backend described above.
+The previous address, **https://llsy97.github.io/time-tracking-app/**, remains available for existing browser records. GitHub Pages publishes `main` from the repository root; pushing to `main` updates that copy. Sites publication uses a separate saved version. Both hosted editions use the bundled Google Cloud Identity Platform SDK; enable each hostname in the project's authorized domains. Browser data belongs to each address: use Settings → Back up all records on the old address and Restore a backup on the new one.
 
 Deploy the following files together on any **HTTPS static host**:
 

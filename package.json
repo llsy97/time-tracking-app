@@ -7,7 +7,8 @@
     "start": "electron .",
     "dev": "node server.js",
     "web": "node server.js --open",
-    "test": "node --test --test-isolation=none tests/time-utils.test.cjs tests/google-auth.test.cjs",
+    "build:web": "node tools/build-web.cjs",
+    "test": "node --test --test-isolation=none tests/time-utils.test.cjs tests/google-auth.test.cjs tests/workspace-backup.test.cjs",
     "test:ui": "node tests/ui.test.cjs",
     "test:android": "node tools/test-android-tracker.cjs",
     "build": "electron-builder --win portable",
@@ -36,7 +37,9 @@
       "cloud-auth-ui.js",
       "productivity-ui.js",
       "native-tracker.js",
-      "productivity.css"
+      "productivity.css",
+      "workspace-backup.js",
+      "workspace-backup-ui.js"
     ]
   },
   "devDependencies": {
